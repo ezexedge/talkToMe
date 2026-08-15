@@ -18,16 +18,24 @@
 
 services:
   # ------------------------------------------------------------------
-  # Reverse proxy: único punto de entrada. Al servir front y API por el mismo
-  # origen desaparece el CORS.
+  # Caddy: reverse proxy + HTTPS automático.
+  #
+  # Reemplaza a nginx porque saca y renueva el certificado de Let's Encrypt solo
+  # (sin certbot ni cron). Necesita los puertos 80 y 443 abiertos: el 80 es por
+  # donde Let's Encrypt valida el dominio.
+  #
+  # Los volúmenes `caddy_data` y `caddy_config` guardan los certificados: sin
+  # ellos, cada reinicio pediría uno nuevo y Let's Encrypt tiene límite semanal.
   # ------------------------------------------------------------------
-  nginx:
-    image: nginx:1.27-alpine
+  caddy:
+    image: caddy:2-alpine
     ports:
       - '80:80'
+      - '443:443'
     volumes:
-      # :ro → Nginx no tiene por qué escribir su propia config.
-      - ./deploy/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
     depends_on:
       - api1
       - api2
@@ -94,9 +102,18 @@ services:
   dozzle:
     image: amir20/dozzle:latest
     ports:
-      - '9999:8080'
+      # 127.0.0.1 y no 0.0.0.0: Dozzle muestra los logs de TODO el stack, así
+      # que NO debe quedar accesible desde internet. Se llega por túnel SSH:
+      #   ssh -L 9999:localhost:9999 root@droplet
+      - '127.0.0.1:9999:8080'
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
     environment:
       DOZZLE_NO_ANALYTICS: 'true'
     restart: unless-stopped
+
+volumes:
+  # Certificados TLS. Persistirlos evita re-solicitarlos en cada reinicio
+  # (Let's Encrypt limita las emisiones por semana).
+  caddy_data:
+  caddy_config:

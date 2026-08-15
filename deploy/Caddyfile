@@ -1,0 +1,34 @@
+# Caddy as the API reverse proxy.
+#
+# Replaces nginx: Caddy issues and renews the Let's Encrypt certificate on its
+# own, so there is no certbot and no renewal cron to maintain.
+#
+# The frontend lives on Vercel, so CORS is still handled by Nest (CORS_ORIGIN).
+
+talk-to-me-666.duckdns.org {
+	# Round-robin across the two replicas, favouring the one with fewer open
+	# connections — with SSE, open connections are the real measure of load.
+	reverse_proxy api1:3000 api2:3000 {
+		lb_policy least_conn
+
+		# Required for SSE: without it Caddy buffers the response and signaling
+		# messages arrive in batches, or never.
+		flush_interval -1
+
+		# An SSE stream stays open for the whole call.
+		transport http {
+			read_timeout 24h
+			write_timeout 24h
+		}
+
+		health_uri /health/stats
+		health_interval 10s
+	}
+
+	encode gzip
+
+	log {
+		output file /var/log/caddy/access.log
+		format console
+	}
+}
