@@ -1,5 +1,0 @@
-# TEMPORAL - solo para verificar el balanceo con el modo de prueba de carga.
-services:
-  api1: { environment: { NODE_ENV: development, INSTANCE_ID: api1, PORT: 3000 } }
-  api2: { environment: { NODE_ENV: development, INSTANCE_ID: api2, PORT: 3000 } }
-  api3: { environment: { NODE_ENV: development, INSTANCE_ID: api3, PORT: 3000 } }
