@@ -1,0 +1,15 @@
+# Lo que NO se copia al contexto de build.
+#
+# Importante para el tamaño y la velocidad: sin esto Docker manda todo el
+# monorepo (incluidos node_modules, que pesan cientos de MB) al daemon en cada
+# build.
+
+node_modules
+**/node_modules
+**/dist
+**/.turbo
+.git
+**/.env
+**/coverage
+*.log
+apps/front          # el front va a Vercel, no entra en las imágenes

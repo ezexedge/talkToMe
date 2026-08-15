@@ -1,0 +1,69 @@
+flowchart TB
+    subgraph User["👤 Usuario"]
+        direction TB
+        URoot["Ruta:  /<br/><b>Home</b> — lista de rooms"]
+        URoom["Ruta:  /room/:roomId<br/><b>Room</b> — la llamada"]
+        URoot -->|"Crear / Unirse"| URoom
+        URoom -->|"Colgar / Volver"| URoot
+    end
+
+    subgraph Front["🖥️ Front (React + Vite)"]
+        direction TB
+        Home["Home.tsx"]
+        Room["Room.tsx"]
+        Hook["useAudioCall.ts<br/>EventSource + fetch + RTCPeerConnection"]
+        Home --> Hook
+        Room --> Hook
+    end
+
+    subgraph API["⚙️ API NestJS — SignalingController"]
+        direction TB
+        EList["GET  /signaling/rooms<br/>(lista de rooms)"]
+        EStream["GET  /signaling/stream  @Sse()<br/>(canal SSE: server → navegador)"]
+        EOffer["POST /signaling/offer"]
+        EAnswer["POST /signaling/answer"]
+        EIce["POST /signaling/ice-candidate"]
+        ELeave["POST /signaling/leave"]
+        Reg["LocalSseRegistry<br/>Map&lt;clientId, Subject&gt; (RAM)"]
+        Rooms["RoomsService"]
+        Pub["RedisPubSubService<br/>redisPub + redisSub"]
+        EStream --- Reg
+        EList --- Rooms
+        EOffer --- Pub
+        EAnswer --- Pub
+        EIce --- Pub
+        ELeave --- Pub
+    end
+
+    subgraph Redis["🟥 Redis / Upstash (ioredis, TLS)"]
+        direction TB
+        PS["Pub/Sub · canal room:{roomId}"]
+        SET["SET room:{roomId}:members"]
+    end
+
+    %% Usuario -> Front
+    URoot -.-> Home
+    URoom -.-> Room
+
+    %% Front (Home) consume la lista
+    Home -->|"GET /signaling/rooms (polling 3s)"| EList
+
+    %% Front (Hook) recibe por SSE y envía por POST
+    Hook -->|"GET /signaling/stream  (recibo)"| EStream
+    Hook -->|"POST offer/answer/ice/leave  (envío)"| EOffer
+
+    %% API <-> Redis
+    Pub <-->|"PUBLISH / SUBSCRIBE"| PS
+    Rooms <-->|"SADD / SREM / SCARD / SCAN"| SET
+
+    %% Audio directo navegador <-> navegador
+    Room <== "WebRTC · audio directo (STUN)" ==> Room
+
+    classDef user fill:#fef9c3,stroke:#ca8a04,color:#713f12;
+    classDef front fill:#dbeafe,stroke:#2563eb,color:#1e3a8a;
+    classDef api fill:#dcfce7,stroke:#16a34a,color:#14532d;
+    classDef redis fill:#fee2e2,stroke:#dc2626,color:#7f1d1d;
+    class URoot,URoom user;
+    class Home,Room,Hook front;
+    class EList,EStream,EOffer,EAnswer,EIce,ELeave,Reg,Rooms,Pub api;
+    class PS,SET redis;

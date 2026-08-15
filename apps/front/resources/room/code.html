@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>TalkToMe - Active Room</title>
+<!-- Fonts & Icons -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind Setup -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "surface-bright": "#fff8f3",
+                    "on-tertiary-container": "#003a2f",
+                    "tertiary-fixed": "#a6f1db",
+                    "outline-variant": "#e1bfba",
+                    "on-error-container": "#93000a",
+                    "tertiary": "#1a6a59",
+                    "error-container": "#ffdad6",
+                    "on-secondary-fixed-variant": "#2d4b56",
+                    "on-primary": "#ffffff",
+                    "on-secondary": "#ffffff",
+                    "background": "#fff8f3",
+                    "on-background": "#1f1b16",
+                    "secondary-fixed": "#c8e7f5",
+                    "on-surface-variant": "#59413d",
+                    "on-tertiary-fixed": "#002019",
+                    "on-tertiary": "#ffffff",
+                    "inverse-primary": "#ffb4a8",
+                    "on-error": "#ffffff",
+                    "surface-tint": "#ae3123",
+                    "inverse-on-surface": "#f8efe7",
+                    "secondary": "#45636e",
+                    "on-surface": "#1f1b16",
+                    "surface": "#ffffff", /* Adjusted to absolute white for Level 1 Surface tonal layering as per style guide */
+                    "surface-container-highest": "#eae1d9",
+                    "primary-container": "#ff6b57",
+                    "surface-container-lowest": "#ffffff",
+                    "on-secondary-container": "#4a6773",
+                    "primary-fixed-dim": "#ffb4a8",
+                    "on-primary-fixed": "#410000",
+                    "tertiary-fixed-dim": "#8bd5c0",
+                    "primary-fixed": "#ffdad4",
+                    "on-tertiary-fixed-variant": "#005142",
+                    "on-primary-fixed-variant": "#8c170e",
+                    "surface-dim": "#e1d9d1",
+                    "surface-container": "#f5ece4",
+                    "inverse-surface": "#34302b",
+                    "on-secondary-fixed": "#001f29",
+                    "surface-container-low": "#fbf2ea",
+                    "secondary-fixed-dim": "#adcbd9",
+                    "on-primary-container": "#6c0000",
+                    "tertiary-container": "#5fa895",
+                    "surface-variant": "#eae1d9",
+                    "outline": "#8d716c",
+                    "secondary-container": "#c5e5f3",
+                    "error": "#ba1a1a",
+                    "surface-container-high": "#efe7df",
+                    "primary": "#ae3123"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.25rem",
+                    "lg": "0.5rem",
+                    "xl": "0.75rem",
+                    "2xl": "1rem",
+                    "3xl": "1.5rem",
+                    "4xl": "2rem",
+                    "full": "9999px"
+            },
+            "spacing": {
+                    "sm": "16px",
+                    "xl": "64px",
+                    "lg": "40px",
+                    "md": "24px",
+                    "gutter": "16px",
+                    "margin-mobile": "20px",
+                    "base": "4px",
+                    "margin-desktop": "48px",
+                    "xs": "8px"
+            },
+            "fontFamily": {
+                    "label-md": ["Quicksand"],
+                    "h1": ["Quicksand"],
+                    "body-lg": ["Quicksand"],
+                    "h2": ["Quicksand"],
+                    "body-md": ["Quicksand"],
+                    "h3": ["Quicksand"],
+                    "h1-mobile": ["Quicksand"]
+            },
+            "fontSize": {
+                    "label-md": ["14px", {"lineHeight": "20px", "fontWeight": "600"}],
+                    "h1": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                    "body-lg": ["18px", {"lineHeight": "26px", "fontWeight": "500"}],
+                    "h2": ["24px", {"lineHeight": "32px", "letterSpacing": "-0.01em", "fontWeight": "700"}],
+                    "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "500"}],
+                    "h3": ["20px", {"lineHeight": "28px", "fontWeight": "600"}],
+                    "h1-mobile": ["28px", {"lineHeight": "36px", "fontWeight": "700"}]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        /* Custom Audio Wave Animation */
+        .audio-wave {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            height: 24px;
+            justify-content: center;
+        }
+        .audio-wave span {
+            display: block;
+            width: 4px;
+            background-color: currentColor;
+            border-radius: 2px;
+            animation: wave 1s ease-in-out infinite;
+            transform-origin: center;
+        }
+        .audio-wave span:nth-child(1) { animation-delay: 0.0s; height: 40%; }
+        .audio-wave span:nth-child(2) { animation-delay: 0.2s; height: 80%; }
+        .audio-wave span:nth-child(3) { animation-delay: 0.4s; height: 100%; }
+        .audio-wave span:nth-child(4) { animation-delay: 0.6s; height: 70%; }
+        .audio-wave span:nth-child(5) { animation-delay: 0.8s; height: 50%; }
+
+        @keyframes wave {
+            0%, 100% { transform: scaleY(0.4); }
+            50% { transform: scaleY(1); }
+        }
+
+        /* Pulsing Ring for Speaker */
+        @keyframes pulse-ring {
+            0% { transform: scale(1); opacity: 0.8; }
+            100% { transform: scale(1.15); opacity: 0; }
+        }
+        .animate-pulse-ring {
+            animation: pulse-ring 2s cubic-bezier(0.215, 0.61, 0.355, 1) infinite;
+        }
+    </style>
+</head>
+<body class="bg-background text-on-background min-h-screen flex flex-col font-body-md antialiased overflow-hidden selection:bg-primary-container selection:text-on-primary-container">
+<!-- Header: Room Info (Custom per prompt requirements, overriding standard top nav for a focused journey) -->
+<header class="w-full flex items-center justify-between px-margin-desktop py-md max-w-[1440px] mx-auto shrink-0 relative z-10">
+<!-- Minimize/Back action - secondary to the main canvas -->
+<button aria-label="Minimize Room" class="w-12 h-12 rounded-full flex items-center justify-center text-secondary hover:bg-surface-variant transition-colors">
+<span class="material-symbols-outlined text-[28px]">expand_more</span>
+</button>
+<!-- Central Topic & Level -->
+<div class="flex flex-col items-center gap-base">
+<h1 class="font-h2 text-h2 text-on-background text-center">Coffee Shop Roleplay</h1>
+<div class="bg-surface-container-high text-on-surface-variant font-label-md text-label-md px-sm py-[6px] rounded-full flex items-center gap-xs">
+<span class="material-symbols-outlined text-[16px]">school</span>
+                Beginner A2
+            </div>
+</div>
+<!-- Connection Status / Timer -->
+<div class="font-h3 text-h3 text-tertiary flex items-center gap-xs bg-tertiary-fixed/30 px-sm py-[8px] rounded-full">
+<span class="material-symbols-outlined text-[20px]" style="font-variation-settings: 'FILL' 1;">timer</span>
+            14:23
+        </div>
+</header>
+<!-- Main Canvas: Profile Cards -->
+<main class="flex-1 w-full max-w-[1200px] mx-auto px-margin-desktop flex flex-col md:flex-row items-center justify-center gap-xl lg:gap-[120px] relative z-0">
+<!-- Partner Card (Active Speaker) -->
+<article class="w-full max-w-[420px] bg-surface rounded-[40px] p-xl flex flex-col items-center justify-center gap-lg border border-surface-container-high/50 transform transition-transform hover:-translate-y-1">
+<div class="relative">
+<!-- Decorative animated rings for speaking status -->
+<div class="absolute inset-0 rounded-full border-[3px] border-tertiary animate-pulse-ring"></div>
+<div class="absolute inset-0 rounded-full border-[3px] border-tertiary/50 animate-pulse-ring" style="animation-delay: 1s;"></div>
+<!-- Avatar -->
+<div class="w-48 h-48 lg:w-56 lg:h-56 rounded-full overflow-hidden border-4 border-surface relative z-10 bg-surface-container-low">
+<img class="w-full h-full object-cover" data-alt="A warm, high-quality portrait photograph of a friendly young woman with short curly brown hair, smiling genuinely at the camera. The lighting is soft, high-key, and bright, creating a welcoming and calm mood suitable for a language learning application. The background is a flat, solid soft mint green, perfectly aligning with the UI's warm minimalist aesthetic and high-contrast pastel color palette." src="https://lh3.googleusercontent.com/aida-public/AB6AXuB-Da7zeEfKFyTUNKPFt0reKe9J0F2pCIIdBPL2dEBfK8fpuMEV2g7Fppc68xAs7FhgkJxMk16KoTLRJsslre8rzWONtGWLqUCmp0H1FWjBR1Ag4sMyL50hXm78lQw6BZic9BWXLzPvMxpNRyZ0Wwd5NtQY3OaHvnImGeoHIdN-5roy4OAR2AyWCHZ_9FJoo96hcvwQRleeTaVrdV5d-05OzWhhul_n8KqetcNlXb_J_CKy4E0S7wRNxw"/>
+</div>
+<!-- Status Badge (Online) -->
+<div class="absolute bottom-4 right-4 w-6 h-6 rounded-full bg-tertiary border-4 border-surface z-20"></div>
+</div>
+<div class="flex flex-col items-center gap-sm w-full">
+<h2 class="font-h1 text-h1 text-on-background">Elena M.</h2>
+<!-- Speaking Indicator -->
+<div class="flex items-center justify-center gap-sm bg-tertiary-fixed/40 text-tertiary px-sm py-xs rounded-full min-w-[140px]">
+<div class="audio-wave text-tertiary">
+<span></span><span></span><span></span><span></span><span></span>
+</div>
+<span class="font-label-md text-label-md tracking-wide">SPEAKING</span>
+</div>
+</div>
+</article>
+<!-- User Card (Listening/Muted) -->
+<article class="w-full max-w-[420px] bg-surface rounded-[40px] p-xl flex flex-col items-center justify-center gap-lg border border-surface-container-high/50">
+<div class="relative">
+<!-- Avatar -->
+<div class="w-40 h-40 lg:w-48 lg:h-48 rounded-full overflow-hidden border-4 border-surface relative z-10 bg-surface-container-low opacity-90 transition-opacity">
+<img class="w-full h-full object-cover grayscale-[20%]" data-alt="A clean, modern portrait of a casual young man looking attentive and relaxed. The image has a calm, approachable vibe with soft, even front lighting that eliminates harsh shadows. The background is a solid warm cream color, complementing the app's flat, high-contrast, minimalist design language and ensuring a non-intimidating visual atmosphere." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCqxO7OfZYZ6r2fwrKK72XJHtoKGnfivzaAewhYHMrnWJMSz2Q-1YWTuFwhOt88cEBuNNBcJ9eCOuHxTgzQgKTiYpqkth1CRnMAgiAeMF03T2-Rr7UdOfujsTM_RzkvR8QSDkkRsobkdN0YGisJxfdc4J9Fjc_kF3F6c0k6kHXZzDIKx0eOciN5x6wAhnNFcs6SuR3A6ZoiIGNwttWrBGQTRhI6CDfqeEQBfQA7SjQoWKKCoF8zGXmYuQ"/>
+</div>
+</div>
+<div class="flex flex-col items-center gap-sm w-full">
+<h2 class="font-h2 text-h2 text-secondary">You</h2>
+<!-- Muted Indicator -->
+<div class="flex items-center justify-center gap-base text-secondary bg-surface-container px-sm py-xs rounded-full min-w-[140px]">
+<span class="material-symbols-outlined text-[20px]">mic_off</span>
+<span class="font-label-md text-label-md">MUTED</span>
+</div>
+</div>
+</article>
+</main>
+<!-- Bottom Control Bar -->
+<footer class="w-full pb-[64px] pt-md px-margin-desktop flex justify-center shrink-0">
+<div class="flex items-center gap-md lg:gap-lg bg-surface px-lg py-sm rounded-full border border-surface-container-high">
+<!-- Microphone Toggle -->
+<button aria-label="Toggle Microphone" class="w-16 h-16 rounded-[20px] bg-surface-container-high text-secondary flex items-center justify-center hover:bg-surface-variant transition-colors group relative">
+<span class="material-symbols-outlined text-[28px] group-hover:scale-110 transition-transform">mic_off</span>
+<!-- Optional tooltip space -->
+</button>
+<!-- Leave Room (Primary Destructive Action) -->
+<button aria-label="Leave Room" class="h-16 px-xl rounded-[20px] bg-primary text-on-primary flex items-center justify-center gap-sm hover:bg-surface-tint hover:opacity-95 active:scale-[0.98] transition-all">
+<span class="material-symbols-outlined text-[28px]" style="font-variation-settings: 'FILL' 1;">call_end</span>
+<span class="font-h3 text-h3 tracking-wide">Leave Room</span>
+</button>
+<!-- Speaker Toggle -->
+<button aria-label="Toggle Speaker" class="w-16 h-16 rounded-[20px] bg-surface-container-high text-secondary flex items-center justify-center hover:bg-surface-variant transition-colors group relative">
+<span class="material-symbols-outlined text-[28px] group-hover:scale-110 transition-transform">volume_up</span>
+</button>
+</div>
+</footer>
+</body></html>

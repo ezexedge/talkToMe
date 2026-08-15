@@ -1,0 +1,94 @@
+# Stack del API: Nginx + 3 réplicas de NestJS + Dozzle.
+#
+# El FRONT NO está acá: va en Vercel. Este droplet solo corre el backend.
+#
+#   docker compose up --build        levantar todo
+#   docker compose up -d --build api1   redeploy de UNA réplica (sin corte)
+#
+# Se accede por:
+#   http://localhost        → el API (en prod: api.tudominio.com)
+#   http://localhost:9999   → Dozzle (logs de todos los contenedores)
+#
+# Como el front vive en otro origen (Vercel), el CORS SIGUE HACIENDO FALTA:
+# hay que poner la URL de Vercel en CORS_ORIGIN dentro de apps/api/.env.
+#
+# Redis (Upstash) y Postgres (Neon) siguen siendo los de la nube: ya están
+# andando y meterlos acá obligaría a migrar datos. Las credenciales salen de
+# apps/api/.env, que está gitignored.
+
+services:
+  # ------------------------------------------------------------------
+  # Reverse proxy: único punto de entrada. Al servir front y API por el mismo
+  # origen desaparece el CORS.
+  # ------------------------------------------------------------------
+  nginx:
+    image: nginx:1.27-alpine
+    ports:
+      - '80:80'
+    volumes:
+      # :ro → Nginx no tiene por qué escribir su propia config.
+      - ./deploy/nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - api1
+      - api2
+      - api3
+    restart: unless-stopped
+
+  # ------------------------------------------------------------------
+  # API — tres servicios nombrados en vez de `--scale api=3`.
+  #
+  # Nginx no descubre contenedores (eso lo haría Traefik), así que necesita
+  # nombres fijos en su upstream. Con api1/api2/api3 el DNS de Docker resuelve
+  # y no hay que tocar nada al reiniciar.
+  #
+  # NINGUNO publica puertos al host: solo Nginx es alcanzable desde afuera.
+  # ------------------------------------------------------------------
+  api1: &api-base
+    build:
+      context: .                      # la RAÍZ del monorepo (workspaces)
+      dockerfile: apps/api/Dockerfile
+    env_file:
+      - apps/api/.env
+    environment:
+      PORT: 3000
+      NODE_ENV: production
+      INSTANCE_ID: api1               # lo devuelve /health/stats
+    # Margen para que el graceful shutdown cierre los SSE antes del SIGKILL.
+    # Debe ser MAYOR que el timeout interno del apagado (1,5s).
+    stop_grace_period: 15s
+    restart: unless-stopped
+
+  # YAML anchor: api2 y api3 heredan todo de api1 y solo cambian el nombre.
+  api2:
+    <<: *api-base
+    environment:
+      PORT: 3000
+      NODE_ENV: production
+      INSTANCE_ID: api2
+
+  api3:
+    <<: *api-base
+    environment:
+      PORT: 3000
+      NODE_ENV: production
+      INSTANCE_ID: api3
+
+  # ------------------------------------------------------------------
+  # Dozzle: logs de TODOS los contenedores en una web.
+  #
+  # No levanta nada ni orquesta: solo lee el socket de Docker y muestra. Es la
+  # forma de seguir un mensaje que entra por api1 y sale por api3, con los
+  # prefijos que ya tienen los logs ([SSE-01], [ROOM-02]…).
+  #
+  # El socket va :ro y NO se publica el puerto en producción sin protegerlo:
+  # quien accede a Dozzle ve los logs de todo el stack.
+  # ------------------------------------------------------------------
+  dozzle:
+    image: amir20/dozzle:latest
+    ports:
+      - '9999:8080'
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    environment:
+      DOZZLE_NO_ANALYTICS: 'true'
+    restart: unless-stopped

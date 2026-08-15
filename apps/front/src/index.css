@@ -1,0 +1,17 @@
+/**
+ * Estilos globales mínimos.
+ *
+ * Todo el aspecto visual vive en el tema de MUI (`src/theme.ts`) y en los `sx`
+ * de cada componente; acá solo queda lo que CssBaseline no cubre. En particular
+ * NO va nada de dark mode: el sistema "Warm Minimalism" es de un solo tema.
+ */
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+}

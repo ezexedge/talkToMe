@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" role="img" aria-label="TalkToMe">
+  <!--
+    Favicon de TalkToMe: el logotipo de la app.
+
+    Replica lo que se ve en el Home — la palabra "TalkToMe" en coral sobre
+    crema— reducida a sus dos T mayúsculas, que es lo máximo que se lee a 16×16
+    px (el tamaño real de una pestaña). Escribir las 8 letras daría una mancha.
+
+    Colores tomados de theme.ts, los mismos del título de la página:
+      coral  #FF6B57 → primary.main, el color del <Typography variant="h1">
+      crema  #FFF6EE → background.default
+      menta  #8FD9C4 → el acento de "en llamada"
+
+    Las letras van DIBUJADAS como paths y no con <text>, porque un favicon se
+    renderiza fuera de la página: no hereda la Quicksand cargada por la web y
+    caería a una fuente del sistema distinta en cada equipo. Los trazos imitan
+    la Quicksand: palo seco, redondeado y geométrico (de ahí los remates
+    circulares y las proporciones anchas).
+  -->
+
+  <!-- Fondo crema, el mismo de la app. No transparente: en una pestaña, un
+       icono sin fondo se pierde según el tema del navegador. -->
+  <rect width="64" height="64" rx="15" fill="#FFF6EE"/>
+
+  <!-- "T" mayúscula, en coral. Trazos con extremos redondeados, como la
+       Quicksand. Es la inicial de Talk y de To: la marca en una letra. -->
+  <g fill="#FF6B57">
+    <!-- brazo horizontal -->
+    <rect x="11" y="17" width="30" height="7.6" rx="3.8"/>
+    <!-- asta vertical -->
+    <rect x="21.6" y="17" width="7.6" height="30" rx="3.8"/>
+  </g>
+
+  <!-- Segunda "T" en menta, más chica y desplazada: sugiere las dos personas de
+       una llamada 1-a-1 y cierra la sigla "TT" de TalkToMe, sin agregar un
+       elemento ajeno al logotipo. -->
+  <g fill="#8FD9C4">
+    <rect x="34" y="30" width="19" height="6" rx="3"/>
+    <rect x="40.5" y="30" width="6" height="19" rx="3"/>
+  </g>
+</svg>

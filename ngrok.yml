@@ -1,0 +1,17 @@
+# Config de ngrok con DOS túneles a la vez: la API (NestJS) y el front (Vite).
+# El authtoken se hereda de la config global de ngrok (~/Library/Application
+# Support/ngrok/ngrok.yml), por eso no hace falta repetirlo acá.
+#
+# Levantar ambos:   ngrok start --all --config ngrok.yml
+#
+# Ojo: el plan gratis de ngrok permite varios túneles pero UNA sola sesión a la
+# vez. `--all` los abre juntos en una sola sesión, así que está OK.
+version: "3"
+
+tunnels:
+  api:
+    proto: http
+    addr: 3000          # NestJS (PORT)
+  front:
+    proto: http
+    addr: 3001          # Vite dev server

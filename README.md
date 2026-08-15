@@ -1,159 +1,221 @@
-# Turborepo starter
+# MVP — Llamadas de solo audio (WebRTC + SSE + Redis Pub/Sub)
 
-This Turborepo starter is maintained by the Turborepo core team.
+Monorepo Turborepo con dos apps:
 
-## Using this example
+- **`apps/front`** → React (Vite). Cliente de la llamada.
+- **`apps/api`** → NestJS. Servidor de **señalización** (no transporta el audio).
 
-Run the following command:
+El audio va **directo entre navegadores por WebRTC**. NestJS solo intercambia
+los mensajes de señalización (offer/answer/ICE). Soporta **muchas rooms 1-a-1
+simultáneas** y **múltiples instancias** del API gracias a Redis Pub/Sub.
 
-```sh
-npx create-turbo@latest
+## Arquitectura de transporte (3 capas)
+
+1. **Navegador ↔ NestJS**: el navegador **recibe por SSE** (`@Sse()`) y **envía
+   por HTTP POST**. Sin Socket.IO ni WebSockets.
+2. **Instancia NestJS ↔ Instancia NestJS**: **Redis Pub/Sub** (`ioredis`), un
+   canal por room: `room:{roomId}`.
+3. **Navegador ↔ Navegador**: **WebRTC** (el audio directo).
+
+### Por qué hay estado en RAM pese a usar Redis
+
+Una conexión SSE abierta es un objeto vivo en la RAM del proceso. Redis no
+puede empujar al navegador; empuja a la *instancia*, y la instancia empuja al
+navegador por el `Subject` SSE que tiene en memoria. Por eso cada instancia
+guarda **solo** un `Map<clientId, Subject>` de **sus propios** clientes
+(`LocalSseRegistry`). Todo lo demás —membresía de rooms y enrutado entre
+instancias— vive en Redis.
+
+### Flujo de un `offer` (A en instancia 1 → B en instancia 2)
+
+```
+A --POST /offer--> API#1 --PUBLISH room:{id}--> Redis --broadcast--> API#1 (filtra: from===A)
+   Bearer <JWT>     |                                          \-----> API#2 --SSE--> B
+                    └─ JwtAuthGuard: verifica la firma vs JWKS
+                       y fija from = sub del token (NO del body)
 ```
 
-## What's inside?
+Pub/Sub hace broadcast a todos los suscriptores (incluida la instancia que
+publicó). Cada mensaje lleva `from`; al recibir, una instancia entrega solo a
+sus clientes locales de esa room **distintos de `from`**.
 
-This Turborepo includes the following packages/apps:
+El `from` sale del token verificado, así que un cliente no puede publicar
+señalización haciéndose pasar por otro.
 
-### Apps and Packages
+## Componentes del API
 
-- `docs`: a [Next.js](https://nextjs.org/) app
-- `web`: another [Next.js](https://nextjs.org/) app
-- `@repo/ui`: a stub React component library shared by both `web` and `docs` applications
-- `@repo/eslint-config`: `eslint` configurations (includes `eslint-config-next` and `eslint-config-prettier`)
-- `@repo/typescript-config`: `tsconfig.json`s used throughout the monorepo
+- `SignalingController` — `@Sse('stream')` + `POST offer/answer/ice-candidate/leave`.
+- `RoomsService` — membresía vía **Redis SET** `room:{roomId}:members` (add/remove/count/getPeer).
+- `LocalSseRegistry` — el `Map` de Subjects SSE + contador de rooms por instancia (único estado en RAM).
+- `RedisPubSubService` — los dos clientes `ioredis` (pub + sub), subscribe/publish y dispatch.
+- `AuthModule` — valida los JWT de Auth0 (`passport-jwt` + `jwks-rsa`) y sincroniza el usuario con Postgres.
+- `UsersModule` — entidad `User` + `UsersService.upsertFromAuth0()` + `GET /users/me`.
+- `DatabaseModule` — TypeORM contra Neon (Postgres).
 
-Each package/app is 100% [TypeScript](https://www.typescriptlang.org/).
+## Autenticación (Auth0 + Google)
 
-### Utilities
+**Toda** la señalización exige usuario logueado. El flujo es **SPA + JWT**:
 
-This Turborepo has some additional tools already setup for you:
+1. El front hace login con Auth0 (Universal Login → Google) y recibe un access token.
+2. Lo manda en `Authorization: Bearer` en cada POST, y como `?token=` en el SSE
+   (`EventSource` no permite mandar headers).
+3. El API verifica la firma contra el **JWKS público** de Auth0. No guarda ningún
+   secreto de Auth0 ni sesiones: cualquier instancia valida por su cuenta, sin
+   estado compartido — el mismo criterio que llevó la señalización a Redis.
+4. En cada request válido se hace un **upsert** del usuario en Postgres. No hay
+   endpoint de registro: entrar con Google crea la fila.
 
-- [TypeScript](https://www.typescriptlang.org/) for static type checking
-- [ESLint](https://eslint.org/) for code linting
-- [Prettier](https://prettier.io) for code formatting
+### Identidad: el `clientId` ES el `sub` de Auth0
 
-### Build
+Antes cada pestaña generaba un UUID y lo guardaba en `sessionStorage`. Ahora la
+identidad de una room es el `sub` del token, que trae dos propiedades buscadas:
 
-To build all apps and packages, run the following command:
+- **Sobrevive al F5 sin `sessionStorage`**: el `sub` es siempre el mismo, así que
+  el server reconoce la reconexión y solo renegocia WebRTC.
+- **Un usuario = un lugar**: con un id por pestaña, abrir dos pestañas te dejaba
+  ocupando los dos lugares de la room hablando con vos mismo. Ahora la segunda
+  pestaña es una reconexión de la misma persona.
 
-With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed (recommended):
+Además, el front ya **no manda** el `clientId`: el server lo deriva del token. Si
+viniera del body, cualquiera podría firmar señalización con el id de otro y, por
+ejemplo, expulsar en su nombre.
 
-```sh
-cd my-turborepo
-turbo build
+### Un usuario, una sola room
+
+Se impone con la clave Redis `user:{sub}:room`. Si un usuario ya está en una room
+e intenta entrar a otra, el server responde `already-in-room` con el id de la room
+en la que está. Un solo `GET` en vez de escanear todos los SET de miembros.
+
+### Configurar el tenant de Auth0
+
+1. **Applications → Create Application** → tipo **Single Page Application**.
+   - *Allowed Callback URLs*: `http://localhost:3001`
+   - *Allowed Logout URLs*: `http://localhost:3001`
+   - *Allowed Web Origins*: `http://localhost:3001`
+   - Anotá el **Domain** y el **Client ID**.
+2. **APIs → Create API**.
+   - *Identifier* (= audience), p. ej. `https://api.my-turborepo`. No hace falta
+     que sea una URL real, pero tiene que coincidir **exacto** entre front y API.
+   - Signing Algorithm: **RS256**.
+3. **Authentication → Social → Google** habilitado, y activo para la app SPA.
+
+> **El audience no es opcional.** Sin él, Auth0 devuelve un token *opaco* que el
+> backend no puede validar y todo responde 401.
+
+#### Email y avatar en el access token (opcional)
+
+El access token de Auth0 **no** trae `email`/`name`/`picture` (esos viven en el ID
+token). Sin ellos el usuario se crea igual, pero con el perfil vacío. Para tenerlos,
+agregá una **Action** (Login flow) en Auth0:
+
+```js
+exports.onExecutePostLogin = async (event, api) => {
+  const ns = 'https://my-turborepo/';
+  api.accessToken.setCustomClaim(`${ns}email`, event.user.email);
+  api.accessToken.setCustomClaim(`${ns}name`, event.user.name);
+  api.accessToken.setCustomClaim(`${ns}picture`, event.user.picture);
+};
 ```
 
-Without global `turbo`, use your package manager:
+El namespace tiene que ser el mismo que lee `jwt.strategy.ts`.
 
-```sh
-cd my-turborepo
-npx turbo build
-npm dlx turbo build
-npm exec turbo build
+## Requisitos
+
+- Node ≥ 18
+- Una base **Redis de Upstash** (o cualquier Redis con TLS).
+  - Usar `ioredis` con `REDIS_URL` en esquema **`rediss://`** (TLS).
+  - **No** usar `@upstash/redis` (es REST, no soporta Pub/Sub).
+- Una base **Postgres** (Neon). Requiere TLS.
+- Un tenant de **Auth0** con la conexión de Google habilitada.
+
+## Instalación
+
+```bash
+npm install
+# ioredis y @nestjs/config ya están en apps/api/package.json
 ```
 
-You can build a specific package by using a [filter](https://turborepo.dev/docs/crafting-your-repository/running-tasks#using-filters):
+## Configuración
 
-With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed:
+**API** — `apps/api/.env` (copiá de `.env.example`):
 
-```sh
-turbo build --filter=docs
+```env
+PORT=3000
+CORS_ORIGIN=http://localhost:3001
+REDIS_URL=rediss://default:PASSWORD@your-host.upstash.io:6379
+
+# Postgres (Neon)
+DATABASE_URL=postgresql://user:password@your-host.neon.tech/neondb?sslmode=require
+
+# Auth0 — acá NO va ningún client secret: el API valida contra el JWKS público.
+AUTH0_DOMAIN=tu-tenant.us.auth0.com
+AUTH0_AUDIENCE=https://api.my-turborepo
+AUTH0_ISSUER_URL=https://tu-tenant.us.auth0.com/
 ```
 
-Without global `turbo`:
+**Front** — `apps/front/.env` (copiá de `.env.example`):
 
-```sh
-npx turbo build --filter=docs
-npm exec turbo build --filter=docs
-npm exec turbo build --filter=docs
+```env
+VITE_API_URL=http://localhost:3000
+
+# Públicos: viajan en el bundle. El flujo SPA usa PKCE, no necesita secret.
+VITE_AUTH0_DOMAIN=tu-tenant.us.auth0.com
+VITE_AUTH0_CLIENT_ID=tu-client-id-de-la-app-SPA
+VITE_AUTH0_AUDIENCE=https://api.my-turborepo
 ```
 
-### Develop
+> El `.env` real está gitignored. Nunca commitees la `REDIS_URL` ni la `DATABASE_URL`.
 
-To develop all apps and packages, run the following command:
+### Esquema de la base
 
-With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed (recommended):
+`synchronize` está activo mientras `NODE_ENV !== 'production'`, así que la tabla
+`users` se crea sola al levantar el API. **En producción hay que apagarlo y usar
+migraciones**: `synchronize` puede borrar columnas al cambiar una entidad.
 
-```sh
-cd my-turborepo
-turbo dev
+## Levantar en dev
+
+```bash
+# Terminal 1 — API
+npm run dev --workspace=api
+
+# Terminal 2 — Front
+npm run dev --workspace=front
 ```
 
-Without global `turbo`, use your package manager:
+Abrí `http://localhost:3001` en **dos pestañas**, escribí el **mismo roomId** en
+ambas y tocá **Unirse**. El segundo en entrar es el *initiator* y crea la oferta.
 
-```sh
-cd my-turborepo
-npx turbo dev
-npm exec turbo dev
-npm exec turbo dev
+> `getUserMedia` requiere **HTTPS o `localhost`**. En localhost funciona; si lo
+> servís por IP/LAN necesitás HTTPS.
+
+## Probar el ruteo entre 2 instancias (Pub/Sub)
+
+Levantá dos instancias del API en puertos distintos, ambas apuntando al **mismo
+Redis**:
+
+```bash
+# Terminal A
+PORT=3000 npm run dev --workspace=api
+
+# Terminal B
+PORT=3002 npm run dev --workspace=api
 ```
 
-You can develop a specific package by using a [filter](https://turborepo.dev/docs/crafting-your-repository/running-tasks#using-filters):
+> El 3001 está tomado por el front (Vite), por eso las instancias del API usan
+> 3000 y 3002.
 
-With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed:
+Apuntá una pestaña a una instancia y la otra a la otra (cambiá `VITE_API_URL`,
+o usá un proxy/balanceador). Como la membresía y la señalización viajan por
+Redis, los dos navegadores se conectan aunque estén en instancias distintas:
+así verificás que Pub/Sub enruta entre procesos.
 
-```sh
-turbo dev --filter=web
-```
+## Notas de implementación
 
-Without global `turbo`:
-
-```sh
-npx turbo dev --filter=web
-npm exec turbo dev --filter=web
-npm exec turbo dev --filter=web
-```
-
-### Remote Caching
-
-> [!TIP]
-> Vercel Remote Cache is free for all plans. Get started today at [vercel.com](https://vercel.com/signup?utm_source=remote-cache-sdk&utm_campaign=free_remote_cache).
-
-Turborepo can use a technique known as [Remote Caching](https://turborepo.dev/docs/core-concepts/remote-caching) to share cache artifacts across machines, enabling you to share build caches with your team and CI/CD pipelines.
-
-By default, Turborepo will cache locally. To enable Remote Caching you will need an account with Vercel. If you don't have an account you can [create one](https://vercel.com/signup?utm_source=turborepo-examples), then enter the following commands:
-
-With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed (recommended):
-
-```sh
-cd my-turborepo
-turbo login
-```
-
-Without global `turbo`, use your package manager:
-
-```sh
-cd my-turborepo
-npx turbo login
-npm exec turbo login
-npm exec turbo login
-```
-
-This will authenticate the Turborepo CLI with your [Vercel account](https://vercel.com/docs/concepts/personal-accounts/overview).
-
-Next, you can link your Turborepo to your Remote Cache by running the following command from the root of your Turborepo:
-
-With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed:
-
-```sh
-turbo link
-```
-
-Without global `turbo`:
-
-```sh
-npx turbo link
-npm exec turbo link
-npm exec turbo link
-```
-
-## Useful Links
-
-Learn more about the power of Turborepo:
-
-- [Tasks](https://turborepo.dev/docs/crafting-your-repository/running-tasks)
-- [Caching](https://turborepo.dev/docs/crafting-your-repository/caching)
-- [Remote Caching](https://turborepo.dev/docs/core-concepts/remote-caching)
-- [Filtering](https://turborepo.dev/docs/crafting-your-repository/running-tasks#using-filters)
-- [Configuration Options](https://turborepo.dev/docs/reference/configuration)
-- [CLI Usage](https://turborepo.dev/docs/reference/command-line-reference)
+- **Initiator = segundo en entrar**: evita *glare* (que ambos ofrezcan a la vez).
+- **ICE encolado**: los candidatos que llegan antes de `setRemoteDescription` se
+  guardan y se aplican después (`addIceCandidate` falla sin descripción remota).
+- **Dos clientes ioredis**: una conexión en modo `subscribe` no puede ejecutar
+  otros comandos, así que `redisPub` (PUBLISH + SET) y `redisSub` (SUBSCRIBE) van
+  separados.
+- **Colgar**: `POST /leave` quita del SET, publica `peer-left` y limpia el estado
+  local; al cerrar la pestaña se envía un `sendBeacon` a `/leave`.

@@ -36,3 +36,10 @@ yarn-error.log*
 # Misc
 .DS_Store
 *.pem
+
+# Markdown de trabajo (notas, specs de diseño, instrucciones para Claude Code).
+# Se ignoran TODOS los .md salvo los README, que sí son documentación del repo.
+# El orden importa: la negación va después de la regla que la incluye.
+*.md
+!README.md
+!**/README.md

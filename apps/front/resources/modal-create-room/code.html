@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Quick Match - TalkToMe</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "surface-variant": "#eae1d9",
+                        "inverse-primary": "#ffb4a8",
+                        "on-tertiary": "#ffffff",
+                        "outline": "#8d716c",
+                        "secondary": "#45636e",
+                        "primary-fixed-dim": "#ffb4a8",
+                        "surface-tint": "#ae3123",
+                        "on-secondary": "#ffffff",
+                        "inverse-surface": "#34302b",
+                        "on-tertiary-container": "#003a2f",
+                        "surface-container": "#f5ece4",
+                        "on-tertiary-fixed-variant": "#005142",
+                        "surface-container-highest": "#eae1d9",
+                        "surface-bright": "#fff8f3",
+                        "surface": "#fff8f3",
+                        "surface-dim": "#e1d9d1",
+                        "tertiary-fixed-dim": "#8bd5c0",
+                        "tertiary": "#1a6a59",
+                        "on-primary-container": "#6c0000",
+                        "on-secondary-fixed": "#001f29",
+                        "on-background": "#1f1b16",
+                        "outline-variant": "#e1bfba",
+                        "on-primary": "#ffffff",
+                        "on-surface": "#1f1b16",
+                        "primary": "#ae3123",
+                        "surface-container-low": "#fbf2ea",
+                        "inverse-on-surface": "#f8efe7",
+                        "on-primary-fixed": "#410000",
+                        "tertiary-container": "#5fa895",
+                        "surface-container-high": "#efe7df",
+                        "surface-container-lowest": "#ffffff",
+                        "error-container": "#ffdad6",
+                        "on-secondary-container": "#4a6773",
+                        "secondary-fixed-dim": "#adcbd9",
+                        "secondary-fixed": "#c8e7f5",
+                        "on-surface-variant": "#59413d",
+                        "primary-fixed": "#ffdad4",
+                        "primary-container": "#ff6b57",
+                        "error": "#ba1a1a",
+                        "background": "#fff8f3",
+                        "on-error": "#ffffff",
+                        "on-tertiary-fixed": "#002019",
+                        "on-primary-fixed-variant": "#8c170e",
+                        "on-error-container": "#93000a",
+                        "secondary-container": "#c5e5f3",
+                        "tertiary-fixed": "#a6f1db",
+                        "on-secondary-fixed-variant": "#2d4b56"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px",
+                        "dialog": "20px",
+                        "button": "14px",
+                        "input": "14px"
+                    },
+                    "spacing": {
+                        "xl": "64px",
+                        "sm": "16px",
+                        "base": "4px",
+                        "margin-desktop": "48px",
+                        "lg": "40px",
+                        "xs": "8px",
+                        "md": "24px",
+                        "margin-mobile": "20px",
+                        "gutter": "16px"
+                    },
+                    "fontFamily": {
+                        "h1-mobile": ["Quicksand"],
+                        "body-lg": ["Quicksand"],
+                        "h1": ["Quicksand"],
+                        "label-md": ["Quicksand"],
+                        "h2": ["Quicksand"],
+                        "body-md": ["Quicksand"],
+                        "h3": ["Quicksand"]
+                    },
+                    "fontSize": {
+                        "h1-mobile": ["28px", { "lineHeight": "36px", "fontWeight": "700" }],
+                        "body-lg": ["18px", { "lineHeight": "26px", "fontWeight": "500" }],
+                        "h1": ["32px", { "lineHeight": "40px", "letterSpacing": "-0.02em", "fontWeight": "700" }],
+                        "label-md": ["14px", { "lineHeight": "20px", "fontWeight": "600" }],
+                        "h2": ["24px", { "lineHeight": "32px", "letterSpacing": "-0.01em", "fontWeight": "700" }],
+                        "body-md": ["16px", { "lineHeight": "24px", "fontWeight": "500" }],
+                        "h3": ["20px", { "lineHeight": "28px", "fontWeight": "600" }]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .material-symbols-outlined[data-weight="fill"] {
+            font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        
+        /* Select Reset */
+        select {
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            appearance: none;
+        }
+        
+        .select-icon {
+            pointer-events: none;
+        }
+    </style>
+</head>
+<body class="bg-background text-on-background font-body-md relative overflow-hidden h-screen w-full flex">
+<!-- TopAppBar -->
+<header class="w-full h-16 bg-background dark:bg-background flex justify-between items-center px-margin-desktop max-w-[1200px] mx-auto absolute top-0 left-0 right-0 z-10">
+<div class="flex items-center gap-md">
+<span class="font-h1 text-h1 font-bold text-primary dark:text-primary-fixed-dim">TalkToMe</span>
+</div>
+<nav class="hidden md:flex gap-md">
+<a class="text-secondary dark:text-secondary-fixed-dim hover:text-primary dark:hover:text-primary-fixed-dim transition-colors font-body-md text-body-md" href="#">Discover</a>
+<a class="text-primary dark:text-primary-fixed-dim border-b-2 border-primary dark:border-primary-fixed-dim pb-1 font-body-md text-body-md" href="#">Community</a>
+<a class="text-secondary dark:text-secondary-fixed-dim hover:text-primary dark:hover:text-primary-fixed-dim transition-colors font-body-md text-body-md" href="#">My Sessions</a>
+</nav>
+<div class="flex items-center gap-sm">
+<button class="text-secondary hover:text-primary transition-colors">
+<span class="material-symbols-outlined" data-icon="notifications">notifications</span>
+</button>
+<button class="text-secondary hover:text-primary transition-colors">
+<span class="material-symbols-outlined" data-icon="settings">settings</span>
+</button>
+<button class="bg-primary text-on-primary font-label-md text-label-md px-4 py-2 rounded-button hover:bg-primary-container transition-colors">
+                Find Partner
+            </button>
+<img alt="User profile" class="w-10 h-10 rounded-full object-cover ml-2" data-alt="A small circular avatar of a smiling young person with warm lighting and a soft cream background, reflecting a friendly, approachable aesthetic." src="https://lh3.googleusercontent.com/aida-public/AB6AXuC4uQPgCTHYl5KwA2Qwa5J4Wq7gO0D_8y8UXBg1blZUSKUFqxvRT60FN1O1LMm3JJvAZS9zK_IMUtYJ8r50QDY5z8yVwsiNe_XjixqNMWxfSqS-FOIuqU1Yfj0J3HJNrV5SsJXcodip-zi_nW757VSvTadztKY_a1Rdz8HlMG-MipWoBWq3KWq8SpZC8vnB9TulyGKc8PIEhIFqzr3L5GbEXOUO3_tCd2uBGEbmepnMxwiPgMRJMTLz_w"/>
+</div>
+</header>
+<!-- SideNavBar -->
+<aside class="h-screen w-64 fixed left-0 top-0 bg-surface dark:bg-surface-dim flex flex-col py-md pt-[80px] z-0">
+<nav class="flex-1 px-2 space-y-2 mt-md">
+<a class="flex items-center gap-3 text-secondary dark:text-secondary-fixed-dim px-4 py-3 hover:bg-surface-variant dark:hover:bg-surface-variant rounded-xl transition-all duration-200 ease-in-out font-label-md text-label-md cursor-pointer" href="#">
+<span class="material-symbols-outlined" data-icon="home">home</span>
+                Home
+            </a>
+<a class="flex items-center gap-3 bg-primary-container dark:bg-primary text-on-primary-container dark:text-on-primary rounded-xl px-4 py-3 mx-2 my-1 transition-all duration-200 ease-in-out font-label-md text-label-md cursor-pointer" href="#">
+<span class="material-symbols-outlined" data-icon="group" data-weight="fill">group</span>
+                Community
+            </a>
+<a class="flex items-center gap-3 text-secondary dark:text-secondary-fixed-dim px-4 py-3 hover:bg-surface-variant dark:hover:bg-surface-variant rounded-xl transition-all duration-200 ease-in-out font-label-md text-label-md cursor-pointer" href="#">
+<span class="material-symbols-outlined" data-icon="history">history</span>
+                History
+            </a>
+<a class="flex items-center gap-3 text-secondary dark:text-secondary-fixed-dim px-4 py-3 hover:bg-surface-variant dark:hover:bg-surface-variant rounded-xl transition-all duration-200 ease-in-out font-label-md text-label-md cursor-pointer" href="#">
+<span class="material-symbols-outlined" data-icon="star">star</span>
+                Favorites
+            </a>
+</nav>
+<div class="px-4 mt-auto">
+<button class="w-full bg-surface-container-high text-primary font-label-md text-label-md py-3 rounded-button hover:bg-surface-variant transition-colors flex justify-center items-center gap-2 border-2 border-secondary">
+<span class="material-symbols-outlined" data-icon="play_arrow">play_arrow</span>
+                Start Session
+            </button>
+</div>
+</aside>
+<!-- Main Content (Blurred/Dimmed background) -->
+<main class="ml-64 pt-[80px] w-full p-margin-desktop h-full overflow-y-auto filter blur-sm transition-all duration-300">
+<!-- English Hub Content - simplified for background effect -->
+<div class="max-w-[1200px] mx-auto opacity-70">
+<h1 class="font-h1 text-h1 text-on-background mb-lg">English Hub</h1>
+<div class="grid grid-cols-1 md:grid-cols-3 gap-md">
+<!-- Mock Cards -->
+<div class="bg-surface p-md rounded-2xl h-[300px] border border-surface-container-high"></div>
+<div class="bg-surface p-md rounded-2xl h-[300px] border border-surface-container-high col-span-2"></div>
+<div class="bg-surface p-md rounded-2xl h-[200px] border border-surface-container-high col-span-3"></div>
+</div>
+</div>
+</main>
+<!-- Modal Overlay -->
+<div class="fixed inset-0 bg-[#001f29] bg-opacity-40 z-50 flex items-center justify-center p-margin-mobile">
+<!-- Modal Content -->
+<div class="bg-surface w-full max-w-md rounded-dialog p-lg flex flex-col gap-md relative animate-in fade-in zoom-in duration-200 shadow-none border border-surface-container-high">
+<!-- Close Button (Optional, for realistic feel) -->
+<button class="absolute top-sm right-sm text-secondary hover:text-primary transition-colors p-2 rounded-full hover:bg-surface-variant">
+<span class="material-symbols-outlined" data-icon="close">close</span>
+</button>
+<!-- Header -->
+<div class="text-center mb-sm">
+<h2 class="font-h2 text-h2 text-on-background">Quick match</h2>
+<p class="font-body-md text-body-md text-secondary mt-1">Find a partner right now.</p>
+</div>
+<!-- Form -->
+<div class="flex flex-col gap-sm">
+<!-- English Level Dropdown -->
+<div class="flex flex-col gap-xs">
+<label class="font-label-md text-label-md text-on-surface-variant ml-1" for="english-level">English level</label>
+<div class="relative">
+<select class="w-full bg-surface-container-lowest border border-secondary text-on-background font-body-md text-body-md rounded-input h-[48px] px-4 py-0 focus:outline-none focus:border-primary focus:border-2 focus:ring-0 transition-colors" id="english-level">
+<option value="beginner">Beginner</option>
+<option selected="" value="intermediate">Intermediate</option>
+<option value="advanced">Advanced</option>
+</select>
+<span class="material-symbols-outlined absolute right-3 top-1/2 transform -translate-y-1/2 text-secondary select-icon" data-icon="expand_more">expand_more</span>
+</div>
+</div>
+<!-- Topic Dropdown -->
+<div class="flex flex-col gap-xs">
+<label class="font-label-md text-label-md text-on-surface-variant ml-1" for="topic">Topic</label>
+<div class="relative">
+<select class="w-full bg-surface-container-lowest border border-secondary text-on-background font-body-md text-body-md rounded-input h-[48px] px-4 py-0 focus:outline-none focus:border-primary focus:border-2 focus:ring-0 transition-colors" id="topic">
+<option selected="" value="free-talk">Free talk</option>
+<option value="travel">Travel</option>
+<option value="work">Work</option>
+<option value="daily-life">Daily life</option>
+<option value="culture-movies">Culture and movies</option>
+<option value="exam-prep">Exam prep</option>
+</select>
+<span class="material-symbols-outlined absolute right-3 top-1/2 transform -translate-y-1/2 text-secondary select-icon" data-icon="expand_more">expand_more</span>
+</div>
+</div>
+</div>
+<!-- Actions -->
+<div class="mt-md">
+<button class="w-full bg-primary-container text-on-primary h-[48px] rounded-button font-label-md text-label-md hover:bg-[#ae3123] transition-colors flex items-center justify-center gap-2">
+<span class="material-symbols-outlined" data-icon="search">search</span>
+                    Search
+                </button>
+</div>
+<!-- Quick Tip -->
+<div class="text-center mt-2">
+<p class="font-body-md text-[13px] text-secondary flex items-center justify-center gap-1">
+<span class="material-symbols-outlined text-[16px]" data-icon="lightbulb">lightbulb</span>
+                     Matches usually take less than 30 seconds.
+                 </p>
+</div>
+</div>
+</div>
+</body></html>
