@@ -9,7 +9,6 @@ import { UserCacheService } from './user-cache.service';
   imports: [TypeOrmModule.forFeature([User])],
   controllers: [UsersController],
   providers: [UsersService, UserCacheService],
-  // Lo exporta porque AuthModule lo necesita: la JwtStrategy hace el upsert.
   exports: [UsersService, UserCacheService],
 })
 export class UsersModule {}

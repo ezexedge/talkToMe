@@ -8,17 +8,6 @@ import { UserCacheService, type PublicProfile } from './user-cache.service';
 export class UsersController {
   constructor(private readonly cache: UserCacheService) {}
 
-  /**
-   * Perfiles públicos por `sub` de Auth0: `GET /users/profiles?subs=a,b`.
-   *
-   * Lo usa la sala para mostrar el nombre y la foto del peer, que por SSE llega
-   * solo como id. Resuelve desde Redis (con fallback a Postgres), o sea el
-   * mismo camino barato que el lobby.
-   *
-   * Exige sesión: son identidades de terceros, igual que en el lobby. Y devuelve
-   * SOLO nombre y foto — nunca el email, que no hace falta para pintar un
-   * avatar y sería exponer de más.
-   */
   @Get('profiles')
   @UseGuards(JwtAuthGuard)
   async profiles(@Query('subs') subs?: string): Promise<PublicProfile[]> {
@@ -29,12 +18,6 @@ export class UsersController {
       (sub) => found.get(sub) ?? { sub, name: null, picture: null },
     );
   }
-  /**
-   * Perfil del usuario logueado, tal como quedó guardado en Neon.
-   *
-   * El front lo usa para confirmar que el backend aceptó el token y que la fila
-   * existe. Llegar acá con 200 significa que el upsert ya corrió.
-   */
   @Get('me')
   @UseGuards(JwtAuthGuard)
   me(@CurrentUser() user: User) {

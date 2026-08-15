@@ -41,23 +41,16 @@ const STATUS_LABEL: Record<CallStatus, string> = {
   error: 'Error',
 };
 
-/** Anillos concéntricos que se expanden mientras el peer tiene audio activo. */
 const pulseRing = keyframes`
   0% { transform: scale(1); opacity: 0.8; }
   100% { transform: scale(1.15); opacity: 0; }
 `;
 
-/**
- * Room — la pantalla de la llamada. Toma el roomId de la URL (/room/:roomId),
- * se une automáticamente al montar y cuelga al desmontar / volver.
- */
 function Room() {
   const { roomId = '' } = useParams();
   const navigate = useNavigate();
-  // Perfil propio, para mostrar mi foto en mi tarjeta.
   const { user, getAccessTokenSilently } = useAuth0();
 
-  // Modal de confirmación para eliminar la sala.
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
@@ -79,34 +72,19 @@ function Room() {
     toggleMute,
   } = useAudioCall(roomId);
 
-  // Nombre y foto del otro participante. La señalización solo nos da su `sub`
-  // (en el `from` de los mensajes SSE); el perfil se resuelve contra el API,
-  // que lo sirve desde la caché de Redis.
   const peerProfile = usePeerProfile(peerId);
 
-  // Unirse una sola vez al montar (StrictMode está desactivado en main.tsx,
-  // así que esto corre una única vez).
   const startedRef = useRef(false);
   useEffect(() => {
     if (!roomId || startedRef.current) return;
     startedRef.current = true;
     void join();
-    // hangup al desmontar (volver al lobby, cerrar pestaña, etc.).
     return () => {
-      // Se rearma la guarda: si React reusa esta instancia para una nueva
-      // visita a la sala (volver desde el lobby sin recargar), el effect tiene
-      // que poder unirse otra vez. Sin esto, la segunda entrada no llamaba a
-      // join() y quedabas en la pantalla de llamada sin estar en la sala.
       startedRef.current = false;
       void hangup();
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [roomId]);
 
-  /**
-   * Eliminar la sala. El server revalida que seas el dueño y que estés solo,
-   * así que esto es la parte de UI de una decisión que se toma allá.
-   */
   const handleDelete = async () => {
     setDeleting(true);
     try {
@@ -122,7 +100,6 @@ function Room() {
         setDeleteError(body.message ?? 'Could not delete the room.');
         return;
       }
-      // Colgar antes de navegar: cierra el SSE y suelta el micrófono.
       void hangup();
       navigate('/');
     } catch {
@@ -133,22 +110,16 @@ function Room() {
   };
 
   const handleLeave = () => {
-    // hangup también corre en el cleanup del effect, pero lo llamamos explícito
-    // para colgar antes de cambiar de ruta.
     void hangup();
     navigate('/');
   };
 
-  // Expulsar es irreversible para el otro (lo saca de la llamada sin aviso),
-  // así que pedimos confirmación antes.
   const handleKick = () => {
     if (window.confirm('Remove the other participant from the room?')) {
       void kick();
     }
   };
 
-  // Si NOS expulsaron, el hook ya cortó todo (mic, WebRTC, SSE); acá solo
-  // sacamos al usuario de la pantalla de llamada y lo devolvemos al lobby.
   useEffect(() => {
     if (kicked) {
       navigate('/', { state: { kickedFrom: roomId } });
@@ -166,7 +137,6 @@ function Room() {
         flexDirection: 'column',
       }}
     >
-      {/* --- Header --- */}
       <Stack
         component="header"
         direction="row"
@@ -207,9 +177,6 @@ function Room() {
             />
           )}
         </Stack>
-
-        {/* En la maqueta este chip es un cronómetro; acá muestra el estado real
-            de la llamada, que es el dato que la app sí tiene. */}
         <Chip
           label={STATUS_LABEL[status]}
           sx={{
@@ -231,8 +198,6 @@ function Room() {
           </Alert>
         </Box>
       )}
-
-      {/* --- Canvas: las dos tarjetas de participante --- */}
       <Stack
         component="main"
         direction={{ xs: 'column', md: 'row' }}
@@ -248,7 +213,6 @@ function Room() {
           mx: 'auto',
         }}
       >
-        {/* Tarjeta del PEER */}
         <Box
           sx={{
             width: '100%',
@@ -266,7 +230,6 @@ function Room() {
           }}
         >
           <Box sx={{ position: 'relative', display: 'grid' }}>
-            {/* Anillos animados: solo mientras hay audio del peer. */}
             {peerConnected &&
               [0, 1].map((i) => (
                 <Box
@@ -284,9 +247,6 @@ function Room() {
                 />
               ))}
             <Avatar
-              // Foto de Google del peer. Si todavía no se resolvió el perfil
-              // (o el usuario no tiene foto), MUI cae al children: la inicial
-              // de su nombre, y si tampoco hay nombre, el ícono genérico.
               src={peerProfile?.picture ?? undefined}
               alt={peerProfile?.name ?? 'Participant'}
               sx={{
@@ -323,17 +283,12 @@ function Room() {
 
           <Stack sx={{ alignItems: 'center', gap: 4, width: '100%' }}>
             <Typography variant="h1">
-              {/* Nombre real del peer. Mientras el perfil no llegó, se cae a
-                  'Participant' para no dejar el título vacío un instante. */}
               {peerConnected
                 ? (peerProfile?.name ?? 'Participant')
                 : 'Nobody here yet'}
             </Typography>
 
             {peerConnected && peerMuted ? (
-              // El peer silenció su micrófono. Se muestra en vez de la onda de
-              // audio: dibujar actividad mientras el otro está en silencio haría
-              // pensar que el problema es tuyo.
               <Stack
                 direction="row"
                 sx={{
@@ -390,8 +345,6 @@ function Room() {
             )}
           </Stack>
         </Box>
-
-        {/* Tarjeta PROPIA */}
         <Box
           sx={{
             width: '100%',
@@ -407,8 +360,6 @@ function Room() {
             gap: 8,
           }}
         >
-          {/* Mi propia foto, de Auth0. El nombre NO se muestra: abajo dice
-              "You", que es más claro que leer el nombre de uno mismo. */}
           <Avatar
             src={user?.picture ?? undefined}
             alt="You"
@@ -469,8 +420,6 @@ function Room() {
           </Stack>
         </Box>
       </Stack>
-
-      {/* --- Barra de acciones --- */}
       <Stack
         direction="row"
         sx={{
@@ -494,10 +443,6 @@ function Room() {
         >
           {muted ? 'Unmute' : 'Mute'}
         </Button>
-
-        {/* Expulsar: solo el DUEÑO de la room lo ve, y solo sirve si hay
-            alguien del otro lado. Ocultarlo al invitado es cosmético — el
-            server rechaza el kick de quien no es dueño. */}
         {isOwner && (
           <Button
             variant="contained"
@@ -513,11 +458,6 @@ function Room() {
             Remove
           </Button>
         )}
-
-        {/* Eliminar la sala. Solo el dueño la ve, y solo se habilita cuando
-            está SOLO: borrarla con alguien adentro le cortaría la llamada de
-            golpe. Para sacar a alguien ya está "Remove", que es otra acción.
-            El server revalida ambas condiciones. */}
         {isOwner && (
           <Button
             variant="outlined"
@@ -553,11 +493,7 @@ function Room() {
       >
         clientId: {clientId}
       </Typography>
-
-      {/* Audio remoto del peer. IMPRESCINDIBLE: es lo que reproduce la voz del
-          otro lado; si este elemento no está montado, la llamada no se oye. */}
-      {/* Confirmación de borrado: es irreversible, así que no se ejecuta de
-          un solo clic. */}
+      {}
       <Dialog
         open={confirmDelete}
         onClose={() => !deleting && setConfirmDelete(false)}

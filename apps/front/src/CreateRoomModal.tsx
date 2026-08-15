@@ -13,11 +13,6 @@ import Typography from '@mui/material/Typography';
 import { LEVELS } from './levels';
 import { brand } from './theme';
 
-/**
- * Tópicos de conversación, también hardcodeados.
- * "Anything goes" va primero a propósito: es el default del select, la opción
- * de menor fricción para quien solo quiere hablar y no elegir un tema.
- */
 const TOPICS = [
   { value: 'free-talk', label: 'Anything goes (free talk)' },
   { value: 'daily-life', label: 'Daily life & routines' },
@@ -50,21 +45,9 @@ const TOPICS = [
 interface Props {
   open: boolean;
   onClose: () => void;
-  /** Recibe el roomId ya resuelto a partir de nivel + tópico. */
   onCreate: (roomId: string) => void;
 }
 
-/**
- * Modal de alta de room de TalkToMe.
- *
- * No hay input de nombre libre: la room se identifica por el par
- * (nivel de inglés, tópico), que es justo lo que alguien busca al unirse.
- * Se le agrega un sufijo corto aleatorio para que dos personas puedan crear
- * rooms distintas con la misma combinación sin chocar (la room es 1-a-1).
- *
- * El backdrop es Petrol Blue sólido al 40% SIN blur: el sistema de diseño no
- * usa desenfoque ni sombras, la profundidad se expresa por capas tonales.
- */
 function CreateRoomModal({ open, onClose, onCreate }: Props) {
   const [level, setLevel] = useState<string>(LEVELS[0].value);
   const [topic, setTopic] = useState<string>(TOPICS[0].value);
@@ -130,8 +113,6 @@ function CreateRoomModal({ open, onClose, onCreate }: Props) {
           label="Topic"
           value={topic}
           onChange={(e) => setTopic(e.target.value)}
-          // La lista es larga: se le pone tope de alto al menú para que no
-          // desborde la pantalla y scrollee dentro del popup.
           slotProps={{
             select: {
               MenuProps: { slotProps: { paper: { sx: { maxHeight: 320 } } } },
