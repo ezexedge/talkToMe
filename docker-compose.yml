@@ -31,19 +31,23 @@ services:
     depends_on:
       - api1
       - api2
-      - api3
     restart: unless-stopped
 
   # ------------------------------------------------------------------
-  # API — tres servicios nombrados en vez de `--scale api=3`.
+  # API — dos réplicas (no tres): en un droplet de 1 GB cada proceso Nest ocupa
+  # ~100 MB, y con dos ya se consigue lo que importa —deploys sin corte total y
+  # aguante si una crashea—. La tercera sumaba consumo sin beneficio real a esta
+  # escala.
+  #
+  # Servicios nombrados en vez de `--scale api=2`.
   #
   # Nginx no descubre contenedores (eso lo haría Traefik), así que necesita
-  # nombres fijos en su upstream. Con api1/api2/api3 el DNS de Docker resuelve
+  # nombres fijos en su upstream. Con api1/api2 el DNS de Docker resuelve
   # y no hay que tocar nada al reiniciar.
   #
   # NINGUNO publica puertos al host: solo Nginx es alcanzable desde afuera.
   # ------------------------------------------------------------------
-  api1: &api-base
+  api1:
     # Solo api1 declara `build`. Las otras dos reutilizan la MISMA imagen por su
     # nombre: sin `image:` compartido, Docker construye una imagen por servicio
     # y el `npm ci` (varios minutos en 1 vCPU) se repite tres veces.
@@ -62,30 +66,26 @@ services:
     stop_grace_period: 15s
     restart: unless-stopped
 
-  # YAML anchor: api2 y api3 heredan todo de api1 y solo cambian el nombre.
+  # api2 NO hereda de api1: si heredara, arrastraría su bloque `build`
+  # y Docker compilaría la misma imagen dos veces (varios minutos cada una en
+  # 1 vCPU). Declara solo `image`, así reutiliza la que ya construyó api1.
   api2:
-    <<: *api-base
-    build: !reset null                # usa la imagen que ya construyó api1
+    image: talktome-api:latest
+    env_file:
+      - apps/api/.env
+    stop_grace_period: 15s
+    restart: unless-stopped
     depends_on: [api1]
     environment:
       PORT: 3000
       NODE_ENV: production
       INSTANCE_ID: api2
 
-  api3:
-    <<: *api-base
-    build: !reset null                # usa la imagen que ya construyó api1
-    depends_on: [api1]
-    environment:
-      PORT: 3000
-      NODE_ENV: production
-      INSTANCE_ID: api3
-
   # ------------------------------------------------------------------
   # Dozzle: logs de TODOS los contenedores en una web.
   #
   # No levanta nada ni orquesta: solo lee el socket de Docker y muestra. Es la
-  # forma de seguir un mensaje que entra por api1 y sale por api3, con los
+  # forma de seguir un mensaje que entra por api1 y sale por api2, con los
   # prefijos que ya tienen los logs ([SSE-01], [ROOM-02]…).
   #
   # El socket va :ro y NO se publica el puerto en producción sin protegerlo:
