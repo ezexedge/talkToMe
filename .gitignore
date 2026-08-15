@@ -5,12 +5,16 @@ node_modules
 .pnp
 .pnp.js
 
-# Local env files
+# Archivos de entorno: NUNCA se versionan (traen credenciales de Neon, Upstash
+# y Auth0). La regla es amplia a propósito —cubre .env.production, .env.staging
+# y cualquier variante futura— y solo se exceptúan los .example, que llevan
+# placeholders y sí sirven de documentación.
 .env
-.env.local
-.env.development.local
-.env.test.local
-.env.production.local
+.env.*
+**/.env
+**/.env.*
+!.env.example
+!**/.env.example
 
 # Testing
 coverage
