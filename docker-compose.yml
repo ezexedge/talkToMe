@@ -44,6 +44,10 @@ services:
   # NINGUNO publica puertos al host: solo Nginx es alcanzable desde afuera.
   # ------------------------------------------------------------------
   api1: &api-base
+    # Solo api1 declara `build`. Las otras dos reutilizan la MISMA imagen por su
+    # nombre: sin `image:` compartido, Docker construye una imagen por servicio
+    # y el `npm ci` (varios minutos en 1 vCPU) se repite tres veces.
+    image: talktome-api:latest
     build:
       context: .                      # la RAÍZ del monorepo (workspaces)
       dockerfile: apps/api/Dockerfile
@@ -61,6 +65,8 @@ services:
   # YAML anchor: api2 y api3 heredan todo de api1 y solo cambian el nombre.
   api2:
     <<: *api-base
+    build: !reset null                # usa la imagen que ya construyó api1
+    depends_on: [api1]
     environment:
       PORT: 3000
       NODE_ENV: production
@@ -68,6 +74,8 @@ services:
 
   api3:
     <<: *api-base
+    build: !reset null                # usa la imagen que ya construyó api1
+    depends_on: [api1]
     environment:
       PORT: 3000
       NODE_ENV: production
