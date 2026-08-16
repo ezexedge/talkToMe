@@ -66,6 +66,10 @@ function Home() {
   const [toast, setToast] = useState<{
     severity: 'error' | 'success' | 'info';
     message: string;
+    // Room a la que ofrecer ir desde el propio toast (el 409 de "ya tenés una
+    // room"): sin esto el usuario queda trabado, porque una room vacía no
+    // aparece en la lista de activas y no tiene cómo llegar a ella.
+    actionRoomId?: string;
   } | null>(null);
 
   const [levelFilter, setLevelFilter] = useState<Set<LevelValue>>(new Set());
@@ -186,6 +190,29 @@ function Home() {
 
   const createRoom = useCallback(
     async (id: string) => {
+      // El micrófono ANTES del POST: si el usuario bloquea el permiso, no se
+      // creó nada que limpiar. Al revés (crear y después pedir permiso) la room
+      // queda huérfana —invisible en la lista porque está vacía, pero viva en
+      // Redis— y el 409 bloquea crear otra hasta que expire el TTL.
+      //
+      // Las pistas se cortan enseguida: acá solo interesa saber si hay permiso.
+      // useAudioCall vuelve a pedirlas al entrar, y para entonces el navegador
+      // ya recordó la decisión, así que no hay segundo prompt.
+      try {
+        const probe = await navigator.mediaDevices.getUserMedia({
+          audio: true,
+          video: false,
+        });
+        probe.getTracks().forEach((t) => t.stop());
+      } catch {
+        setToast({
+          severity: 'error',
+          message:
+            'Microphone access is required to create a room. Allow it in your browser and try again.',
+        });
+        return;
+      }
+
       try {
         const token = await getAccessTokenSilently();
         const res = await fetch(`${API_URL}/signaling/rooms`, {
@@ -198,10 +225,19 @@ function Home() {
         });
 
         if (res.status === 409) {
+          // El server manda el roomId de la room que ya existe. Se ofrece ir a
+          // ella en vez de dejar al usuario en un callejón sin salida: la room
+          // puede estar vacía y por eso NO aparecer en la lista de activas.
+          const body = (await res.json().catch(() => null)) as {
+            roomId?: string;
+          } | null;
+
           setToast({
             severity: 'error',
-            message:
-              'You can only have one room at a time. Delete your existing room before creating a new one.',
+            message: body?.roomId
+              ? `You already have a room open (${body.roomId}).`
+              : 'You can only have one room at a time. Delete your existing room before creating a new one.',
+            actionRoomId: body?.roomId,
           });
           return;
         }
@@ -613,6 +649,21 @@ function Home() {
             severity={toast.severity}
             onClose={() => setToast(null)}
             variant="filled"
+            action={
+              toast.actionRoomId ? (
+                <Button
+                  color="inherit"
+                  size="small"
+                  onClick={() => {
+                    const target = toast.actionRoomId;
+                    setToast(null);
+                    if (target) goToRoom(target);
+                  }}
+                >
+                  Go to it
+                </Button>
+              ) : undefined
+            }
           >
             {toast.message}
           </Alert>
