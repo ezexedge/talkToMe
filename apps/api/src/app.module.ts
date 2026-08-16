@@ -9,6 +9,8 @@ import { DatabaseModule } from './database/database.module';
 import { RedisModule } from './redis/redis.module';
 import { AuthModule } from './auth/auth.module';
 import { UserThrottlerGuard } from './auth/user-throttler.guard';
+import { RedisThrottlerStorage } from './auth/redis-throttler.storage';
+import { RedisPubSubService } from './signaling/redis-pubsub.service';
 import { UsersModule } from './users/users.module';
 
 /**
@@ -26,6 +28,11 @@ import { UsersModule } from './users/users.module';
  *
  *   - ROOMS: crear room es la operación cara y además ya tiene TTL de 120s.
  *
+ *   - LIST: el GET de rooms, que el front POLLEA cada 10s además de refrescar
+ *     en focus/visibilitychange/pageshow. Tiene cupo propio a propósito: con el
+ *     límite `default` compartido, ese goteo constante agotaba el cupo y hacía
+ *     caer endpoints críticos que también usan `default`, como `leave`.
+ *
  *   - ACTIONS: mute/kick/leave los dispara una persona haciendo clic.
  *
  * IMPORTANTE: son estimaciones con margen (~10x lo esperado), NO valores
@@ -38,13 +45,24 @@ const MINUTE = 60_000;
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
-    ThrottlerModule.forRoot([
-      { name: 'default', ttl: MINUTE, limit: 100 },
-      { name: 'ice', ttl: MINUTE, limit: 200 },
-      { name: 'sdp', ttl: MINUTE, limit: 20 },
-      { name: 'rooms', ttl: MINUTE, limit: 5 },
-      { name: 'actions', ttl: MINUTE, limit: 30 },
-    ]),
+    ThrottlerModule.forRootAsync({
+      // El storage va en Redis (RedisThrottlerStorage), no en memoria: con dos
+      // réplicas detrás de Caddy cada proceso llevaba su propio contador y el
+      // límite real quedaba entre 1x y 2x el configurado.
+      imports: [RedisModule],
+      inject: [RedisPubSubService],
+      useFactory: (redis: RedisPubSubService) => ({
+        throttlers: [
+          { name: 'default', ttl: MINUTE, limit: 100 },
+          { name: 'ice', ttl: MINUTE, limit: 200 },
+          { name: 'sdp', ttl: MINUTE, limit: 20 },
+          { name: 'rooms', ttl: MINUTE, limit: 5 },
+          { name: 'list', ttl: MINUTE, limit: 120 },
+          { name: 'actions', ttl: MINUTE, limit: 30 },
+        ],
+        storage: new RedisThrottlerStorage(redis),
+      }),
+    }),
     DatabaseModule,
     RedisModule,
     AuthModule,

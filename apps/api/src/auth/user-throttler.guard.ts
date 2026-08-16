@@ -1,6 +1,6 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { ExecutionContext, Injectable, Logger } from '@nestjs/common';
 import { ThrottlerGuard, ThrottlerLimitDetail } from '@nestjs/throttler';
-import { Request } from 'express';
+import { Request, Response } from 'express';
 import { User } from '../users/user.entity';
 
 /**
@@ -23,6 +23,25 @@ import { User } from '../users/user.entity';
 export class UserThrottlerGuard extends ThrottlerGuard {
   private readonly logger = new Logger(UserThrottlerGuard.name);
 
+  /**
+   * En desarrollo el rate limiting se saltea por completo.
+   *
+   * Probando a mano se agotan los cupos en minutos (crear room, entrar, F5,
+   * repetir) y el 429 resultante se ve en el navegador como un error de CORS,
+   * que manda a buscar el problema donde no está.
+   *
+   * PRODUCCIÓN ES EL DEFAULT SEGURO: solo se saltea con NODE_ENV EXACTAMENTE
+   * 'development'. Si la variable falta, viene vacía o trae cualquier otro
+   * valor, el límite se aplica. Un error de configuración deja el limitador
+   * ACTIVO, nunca apagado.
+   */
+  private readonly isDev = process.env.NODE_ENV === 'development';
+
+  protected shouldSkip(context: ExecutionContext): Promise<boolean> {
+    if (this.isDev) return Promise.resolve(true);
+    return super.shouldSkip(context);
+  }
+
   protected getTracker(req: Request): Promise<string> {
     const sub = (req.user as User | undefined)?.auth0Id;
 
@@ -42,12 +61,24 @@ export class UserThrottlerGuard extends ThrottlerGuard {
     detail: ThrottlerLimitDetail,
   ): Promise<void> {
     const req = context.switchToHttp().getRequest<Request>();
+    const res = context.switchToHttp().getResponse<Response>();
     const who = (req.user as User | undefined)?.auth0Id ?? req.ip ?? 'unknown';
 
     this.logger.warn(
       `[THROTTLE] 🚦 429 ${req.method} ${req.originalUrl} | user=${who} | ` +
         `límite=${detail.limit}/${detail.ttl / 1000}s`,
     );
+
+    // El 429 se lanza desde un guard, o sea ANTES de que la respuesta pase por
+    // el middleware de CORS. Sin estos headers el navegador no ve un 429: ve un
+    // "error de CORS", y el 429 real queda invisible en la consola. Eso manda a
+    // depurar el CORS cuando el problema es el rate limit.
+    const origin = req.headers.origin;
+    if (origin && !res.headersSent) {
+      res.header('Access-Control-Allow-Origin', origin);
+      res.header('Access-Control-Allow-Credentials', 'true');
+      res.header('Vary', 'Origin');
+    }
 
     return super.throwThrottlingException(context, detail);
   }

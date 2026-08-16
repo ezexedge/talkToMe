@@ -1,11 +1,22 @@
 import { NestFactory } from '@nestjs/core';
+import { NestExpressApplication } from '@nestjs/platform-express';
 import { ConfigService } from '@nestjs/config';
 import { AppModule } from './app.module';
 import { LocalSseRegistry } from './signaling/local-sse-registry';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create<NestExpressApplication>(AppModule);
   const config = app.get(ConfigService);
+
+  // Sin esto, `req.ip` es la IP del contenedor de Caddy para TODOS los
+  // requests, y el rate limiter —que cae a la IP en los endpoints @Public,
+  // como el GET de rooms que el front pollea— mete a todos los usuarios en un
+  // único cupo compartido.
+  //
+  // `1` = confiar en UN solo proxy (Caddy). No usar `true`: eso acepta el
+  // X-Forwarded-For que mande cualquiera y permitiría falsear la IP para
+  // esquivar el límite.
+  app.set('trust proxy', 1);
 
   const configured = (
     config.get<string>('CORS_ORIGIN') ?? 'http://localhost:3001'

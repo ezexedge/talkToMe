@@ -16,8 +16,18 @@ services:
       context: . # la RAÍZ del monorepo (npm workspaces)
       dockerfile: apps/api/Dockerfile
     image: ghcr.io/ezexedge/talktome-api:latest
+    # Pisa el `production` del compose base SOLO en local: con este valor el
+    # UserThrottlerGuard saltea el rate limiting, que probando a mano se agota
+    # en minutos (el front pollea el GET de rooms cada 10s).
+    #
+    # Este archivo NO existe en el droplet, así que en producción NODE_ENV
+    # sigue siendo `production` y el limitador queda ACTIVO.
+    environment:
+      NODE_ENV: development
 
   # api2 NO declara `build`: si lo hiciera, Docker compilaría la misma imagen
   # dos veces. Reutiliza la que construyó api1.
   api2:
     image: ghcr.io/ezexedge/talktome-api:latest
+    environment:
+      NODE_ENV: development
