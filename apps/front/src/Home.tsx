@@ -64,7 +64,7 @@ function Home() {
   const [deleting, setDeleting] = useState(false);
 
   const [toast, setToast] = useState<{
-    severity: 'error' | 'success';
+    severity: 'error' | 'success' | 'info';
     message: string;
   } | null>(null);
 
@@ -323,7 +323,20 @@ function Home() {
             <Button
               variant="contained"
               startIcon={<AddIcon />}
-              onClick={() => setCreateOpen(true)}
+              // Se chequea la sesión ANTES de abrir el modal: sin esto el
+              // usuario completa el formulario y recién ahí falla, porque
+              // getAccessTokenSilently() tira y cae en el catch genérico
+              // ("Could not reach the server"), que además culpa al server.
+              onClick={() => {
+                if (!isAuthenticated) {
+                  setToast({
+                    severity: 'info',
+                    message: 'You must be logged in to create a room.',
+                  });
+                  return;
+                }
+                setCreateOpen(true);
+              }}
               sx={{ mt: 6 }}
             >
               Create room
