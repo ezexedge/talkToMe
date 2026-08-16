@@ -65,7 +65,18 @@ export function usePeerProfile(sub: string | null): PeerProfile | null {
   const [profile, setProfile] = useState<PeerProfile | null>(null);
 
   useEffect(() => {
-    if (!sub || !isAuthenticated) return;
+    // Sin sub NO alcanza con salir: hay que LIMPIAR el perfil. Si solo se
+    // retornara, al irse el peer (peerId → null) quedaría en state la foto del
+    // que se fue, y la sala seguiría mostrándolo como si estuviera presente.
+    if (!sub || !isAuthenticated) {
+      setProfile(null);
+      return;
+    }
+
+    // El perfil viejo se descarta ya mismo, sin esperar al fetch del nuevo:
+    // si no, al entrar un segundo participante se ve la cara del anterior
+    // durante todo el request.
+    setProfile(null);
 
     let cancelled = false;
     void (async () => {

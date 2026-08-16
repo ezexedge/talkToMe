@@ -15,6 +15,7 @@ import {
   Sse,
   UseGuards,
 } from '@nestjs/common';
+import { SkipThrottle, Throttle } from '@nestjs/throttler';
 import { Request } from 'express';
 import { Observable, Subject } from 'rxjs';
 import { finalize } from 'rxjs/operators';
@@ -125,6 +126,10 @@ export class SignalingController {
     }
   }
 
+  // NUNCA se limita: no es un request, es una conexión que queda abierta toda
+  // la llamada. Un 429 acá mataría la llamada en cada reconexión del
+  // EventSource (que reintenta solo ante cualquier corte de red).
+  @SkipThrottle()
   @Sse('stream')
   stream(
     @Auth0Sub() clientId: string,
@@ -311,6 +316,7 @@ export class SignalingController {
     });
   }
 
+  @Throttle({ sdp: { limit: 20, ttl: 60_000 } })
   @Post('offer')
   @HttpCode(202)
   async offer(
@@ -328,6 +334,7 @@ export class SignalingController {
     return { ok: true };
   }
 
+  @Throttle({ sdp: { limit: 20, ttl: 60_000 } })
   @Post('answer')
   @HttpCode(202)
   async answer(
@@ -345,6 +352,10 @@ export class SignalingController {
     return { ok: true };
   }
 
+  // El más alto de todos: los candidatos llegan en ráfaga (10-30 por
+  // negociación, más en móvil con varias interfaces) y cada F5 renegocia desde
+  // cero. 200/min absorbe varias reconexiones seguidas.
+  @Throttle({ ice: { limit: 200, ttl: 60_000 } })
   @Post('ice-candidate')
   @HttpCode(202)
   async ice(
@@ -362,6 +373,7 @@ export class SignalingController {
     return { ok: true };
   }
 
+  @Throttle({ actions: { limit: 30, ttl: 60_000 } })
   @Post('kick')
   @HttpCode(202)
   async kick(
@@ -423,6 +435,9 @@ export class SignalingController {
     return { ok: true };
   }
 
+  // El más restrictivo: crear rooms es lo más caro y ya está acotado por la
+  // regla de una room por usuario. 5/min es holgado para reintentos legítimos.
+  @Throttle({ rooms: { limit: 5, ttl: 60_000 } })
   @Post('rooms')
   @HttpCode(201)
   async createRoom(
@@ -444,6 +459,7 @@ export class SignalingController {
     return { roomId: dto.roomId };
   }
 
+  @Throttle({ actions: { limit: 30, ttl: 60_000 } })
   @Delete('rooms/:roomId')
   @HttpCode(200)
   async deleteRoom(
@@ -473,6 +489,7 @@ export class SignalingController {
     return { ok: true };
   }
 
+  @Throttle({ actions: { limit: 30, ttl: 60_000 } })
   @Post('mute')
   @HttpCode(202)
   async mute(
@@ -491,6 +508,10 @@ export class SignalingController {
     return { ok: true };
   }
 
+  // Límite alto a propósito: bloquear un `leave` deja al usuario colgado en la
+  // room como participante fantasma, y encima lo dispara sendBeacon al cerrar
+  // la pestaña (sin forma de reintentar). Es preferible aceptarlo de más.
+  @Throttle({ default: { limit: 100, ttl: 60_000 } })
   @Post('leave')
   @HttpCode(202)
   async leave(

@@ -246,9 +246,20 @@ function Room() {
                   }}
                 />
               ))}
+            {/* La foto se muestra SOLO con el peer conectado. No alcanza con
+                mirar peerProfile: al irse, peerId y peerConnected se limpian en
+                updates distintos, y en ese frame intermedio se vería todavía la
+                cara del que se fue. Con el peer ausente cae al PersonIcon
+                genérico, que es el estado de "esperando compañero". */}
             <Avatar
-              src={peerProfile?.picture ?? undefined}
-              alt={peerProfile?.name ?? 'Participant'}
+              src={
+                peerConnected ? (peerProfile?.picture ?? undefined) : undefined
+              }
+              alt={
+                peerConnected
+                  ? (peerProfile?.name ?? 'Participant')
+                  : 'Waiting for a partner'
+              }
               sx={{
                 width: 192,
                 height: 192,
@@ -259,7 +270,9 @@ function Room() {
                 fontSize: 72,
               }}
             >
-              {peerProfile?.name?.[0]?.toUpperCase() ?? (
+              {peerConnected && peerProfile?.name ? (
+                peerProfile.name[0].toUpperCase()
+              ) : (
                 <PersonIcon sx={{ fontSize: 90 }} />
               )}
             </Avatar>
