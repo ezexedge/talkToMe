@@ -1,0 +1,120 @@
+# CI + deploy del API al droplet.
+#
+# Push a main  →  GitHub buildea la imagen  →  el droplet la baja y reinicia.
+#
+# El build NO corre en el droplet: tiene 1 vCPU y 1 GB, y el Dockerfile hace
+# `npm ci` dos veces (builder + runner). Eso son varios minutos con el CPU al
+# 100%, compitiendo con la señalización SSE de las llamadas en curso. El runner
+# de GitHub (4 cores, 16 GB) lo hace en una fracción del tiempo y el droplet
+# solo baja la imagen ya construida.
+#
+# El front NO se toca acá: vive en Vercel y se deploya solo.
+
+name: CI
+
+on:
+  push:
+    branches: ['main']
+  pull_request:
+    branches: ['main']
+  workflow_dispatch: # botón manual en la pestaña Actions
+
+jobs:
+  # ------------------------------------------------------------------
+  # Verificación: corre en push Y en pull request.
+  # ------------------------------------------------------------------
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm' # cachea ~/.npm entre runs
+
+      # `ci` y no `install`: respeta el package-lock.json exacto del repo.
+      - name: Install
+        run: npm ci
+
+      # Sin --fix (el script local sí lo tiene): en CI el lint debe FALLAR ante
+      # un problema, no arreglarlo en silencio. El arreglo se perdería igual
+      # cuando muere el runner, y el job daría verde sin haber chequeado nada.
+      - name: Lint
+        run: npx eslint "apps/api/{src,test}/**/*.ts"
+
+      - name: Build
+        run: npx turbo build --filter=api
+
+      # --passWithNoTests: hoy no hay .spec.ts y jest saldría con error.
+      # Cuando escribas el primero, este flag deja de tener efecto solo.
+      - name: Test
+        run: npm run test --workspace=api -- --passWithNoTests
+
+  # ------------------------------------------------------------------
+  # Deploy: solo en push a main, y solo si `build` pasó.
+  # Un pull request NO deploya.
+  # ------------------------------------------------------------------
+  deploy:
+    needs: build
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+      packages: write # para pushear a ghcr.io
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # GITHUB_TOKEN es automático: no hay que crearlo ni guardarlo.
+      - name: Login a GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Build y push de la imagen
+        uses: docker/build-push-action@v6
+        with:
+          context: . # la RAÍZ del monorepo (npm workspaces)
+          file: apps/api/Dockerfile
+          push: true
+          # Dos tags: `latest` es lo que el compose del droplet referencia;
+          # el SHA queda como historial para poder volver atrás a mano.
+          tags: |
+            ghcr.io/ezexedge/talktome-api:latest
+            ghcr.io/ezexedge/talktome-api:${{ github.sha }}
+          # Sin esto, cada deploy reinstala node_modules desde cero aunque no
+          # hayas tocado el package.json.
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Deploy al droplet
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.DROPLET_HOST }}
+          username: root
+          key: ${{ secrets.DROPLET_SSH_KEY }}
+          script: |
+            set -e
+            cd /root/talkToMe
+
+            # Baja la imagen nueva. El .env NO viaja acá: vive solo en el
+            # droplet. Si agregaste una variable, ponela allá ANTES de deployar.
+            docker compose pull api1 api2
+
+            # De a una réplica, no las dos juntas: con SSE y WebRTC, reiniciar
+            # ambas al mismo tiempo corta todas las llamadas activas. Mientras
+            # api1 cierra sus streams (stop_grace_period 15s), api2 sigue
+            # atendiendo, y Caddy la saca del pool sola por el health check.
+            docker compose up -d --no-deps api1
+            sleep 20
+            docker compose up -d --no-deps api2
+
+            # Las imágenes viejas se acumulan y el droplet tiene 25 GB.
+            docker image prune -f

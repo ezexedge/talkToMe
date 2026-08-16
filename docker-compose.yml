@@ -55,14 +55,14 @@ services:
   #
   # NINGUNO publica puertos al host: solo Nginx es alcanzable desde afuera.
   # ------------------------------------------------------------------
+  # La imagen viene del registry, YA CONSTRUIDA por GitHub Actions: el droplet
+  # solo hace `pull`. Buildear acá tarda varios minutos en 1 vCPU y degrada las
+  # llamadas en curso (el CPU se lo lleva `npm ci`, no la señalización).
+  #
+  # Para buildear en local, docker-compose.override.yml agrega el `build` de
+  # vuelta. Ese archivo NO existe en el droplet, así que allá nunca buildea.
   api1:
-    # Solo api1 declara `build`. Las otras dos reutilizan la MISMA imagen por su
-    # nombre: sin `image:` compartido, Docker construye una imagen por servicio
-    # y el `npm ci` (varios minutos en 1 vCPU) se repite tres veces.
-    image: talktome-api:latest
-    build:
-      context: .                      # la RAÍZ del monorepo (workspaces)
-      dockerfile: apps/api/Dockerfile
+    image: ghcr.io/ezexedge/talktome-api:latest
     env_file:
       - apps/api/.env
     environment:
@@ -74,11 +74,9 @@ services:
     stop_grace_period: 15s
     restart: unless-stopped
 
-  # api2 NO hereda de api1: si heredara, arrastraría su bloque `build`
-  # y Docker compilaría la misma imagen dos veces (varios minutos cada una en
-  # 1 vCPU). Declara solo `image`, así reutiliza la que ya construyó api1.
+  # Misma imagen del registry que api1.
   api2:
-    image: talktome-api:latest
+    image: ghcr.io/ezexedge/talktome-api:latest
     env_file:
       - apps/api/.env
     stop_grace_period: 15s

@@ -1,0 +1,23 @@
+# Override para DESARROLLO LOCAL.
+#
+# Docker Compose lo aplica solo si el archivo existe. Como no está en el
+# droplet, allá el compose usa la imagen del registry tal cual; acá vuelve a
+# buildear desde el código local.
+#
+#   docker compose up --build     usa este override automáticamente
+#
+# Si querés probar en local la MISMA imagen que corre en producción:
+#   docker compose -f docker-compose.yml up -d
+# (ignora este archivo y baja la de ghcr.io)
+
+services:
+  api1:
+    build:
+      context: . # la RAÍZ del monorepo (npm workspaces)
+      dockerfile: apps/api/Dockerfile
+    image: ghcr.io/ezexedge/talktome-api:latest
+
+  # api2 NO declara `build`: si lo hiciera, Docker compilaría la misma imagen
+  # dos veces. Reutiliza la que construyó api1.
+  api2:
+    image: ghcr.io/ezexedge/talktome-api:latest

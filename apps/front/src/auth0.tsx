@@ -11,6 +11,18 @@ const domain = import.meta.env.VITE_AUTH0_DOMAIN as string;
 const clientId = import.meta.env.VITE_AUTH0_CLIENT_ID as string;
 const audience = import.meta.env.VITE_AUTH0_AUDIENCE as string;
 
+// TEMPORAL — diagnóstico de deploy. Vite fija las VITE_* al compilar, así que
+// esto muestra TODO lo que quedó dentro del bundle, no lo que hay en el panel.
+console.log('=== import.meta.env COMPLETO ===');
+console.log(import.meta.env);
+Object.entries(import.meta.env).forEach(([k, v]) => {
+  console.log(k, '=', v === '' ? '(CADENA VACÍA)' : v);
+});
+console.log('=== fin ===');
+console.log('VITE_AUTH0_DOMAIN:', domain || '(VACÍA)');
+console.log('VITE_AUTH0_CLIENT_ID:', clientId || '(VACÍA)');
+console.log('VITE_AUTH0_AUDIENCE:', audience || '(VACÍA)');
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   return (
     <Auth0Provider

@@ -31,6 +31,9 @@ export function useSyncUser() {
     void (async () => {
       try {
         const token = await getAccessTokenSilently();
+        // TEMPORAL — diagnóstico: ver si el token llega vacío y por qué.
+        console.log('[SYNC] token length:', token?.length ?? 'NULL/UNDEFINED');
+        console.log('[SYNC] token starts:', token?.slice(0, 25) ?? '(nada)');
         const res = await fetch(`${API_URL}/users/me`, {
           headers: { Authorization: `Bearer ${token}` },
         });
@@ -44,7 +47,8 @@ export function useSyncUser() {
           console.log('[SYNC] 👤 Usuario sincronizado con la DB:', user);
         }
       } catch (e) {
-        console.warn('[SYNC] No se pudo sincronizar el usuario:', e);
+        // El catch tragaba el motivo real; ahora se imprime completo.
+        console.error('[SYNC] getAccessTokenSilently FALLÓ:', e);
       }
     })();
 
