@@ -24,21 +24,49 @@ export class UserThrottlerGuard extends ThrottlerGuard {
   private readonly logger = new Logger(UserThrottlerGuard.name);
 
   /**
-   * En desarrollo el rate limiting se saltea por completo.
+   * Interruptor del rate limiting, POR ENTORNO.
    *
-   * Probando a mano se agotan los cupos en minutos (crear room, entrar, F5,
-   * repetir) y el 429 resultante se ve en el navegador como un error de CORS,
-   * que manda a buscar el problema donde no está.
+   * Se apaga de dos formas:
    *
-   * PRODUCCIÓN ES EL DEFAULT SEGURO: solo se saltea con NODE_ENV EXACTAMENTE
-   * 'development'. Si la variable falta, viene vacía o trae cualquier otro
-   * valor, el límite se aplica. Un error de configuración deja el limitador
-   * ACTIVO, nunca apagado.
+   *   1. `RATE_LIMIT=off` (o `false`/`0`) en el .env — sirve en CUALQUIER
+   *      entorno, producción incluida. Es un interruptor de runtime: para
+   *      volver a prenderlo alcanza con sacar la variable y reiniciar, sin
+   *      tocar código ni hacer deploy.
+   *
+   *   2. `NODE_ENV=development` — probando a mano se agotan los cupos en
+   *      minutos (crear room, entrar, F5, repetir).
+   *
+   * OJO con el default: acá el limitador queda ACTIVO si la variable falta o
+   * trae cualquier otro valor. Apagarlo es siempre una decisión explícita, y
+   * un error de tipeo en el .env no puede dejar la API sin protección por
+   * accidente.
    */
-  private readonly isDev = process.env.NODE_ENV === 'development';
+  private readonly disabled = ((): boolean => {
+    const flag = process.env.RATE_LIMIT?.trim().toLowerCase();
+    return (
+      flag === 'off' ||
+      flag === 'false' ||
+      flag === '0' ||
+      process.env.NODE_ENV === 'development'
+    );
+  })();
+
+  onModuleInit(): Promise<void> {
+    if (this.disabled) {
+      // Se avisa fuerte y en el arranque: un rate limiter apagado sin que nadie
+      // lo note es peor que no tenerlo, porque se cree que está protegiendo.
+      this.logger.warn(
+        '[THROTTLE] ⚠️ RATE LIMITING DESACTIVADO ' +
+          `(RATE_LIMIT=${process.env.RATE_LIMIT ?? 'unset'}, NODE_ENV=${
+            process.env.NODE_ENV ?? 'unset'
+          }). La API acepta peticiones SIN LÍMITE.`,
+      );
+    }
+    return super.onModuleInit();
+  }
 
   protected shouldSkip(context: ExecutionContext): Promise<boolean> {
-    if (this.isDev) return Promise.resolve(true);
+    if (this.disabled) return Promise.resolve(true);
     return super.shouldSkip(context);
   }
 
