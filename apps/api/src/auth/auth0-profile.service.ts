@@ -15,7 +15,10 @@ export class Auth0ProfileService {
   private readonly logger = new Logger(Auth0ProfileService.name);
   private readonly domain: string;
 
-  private readonly cache = new Map<string, { profile: Auth0Profile; at: number }>();
+  private readonly cache = new Map<
+    string,
+    { profile: Auth0Profile; at: number }
+  >();
 
   private static readonly TTL_MS = 60 * 60 * 1000;
 

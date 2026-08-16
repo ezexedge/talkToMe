@@ -13,7 +13,12 @@ import { JwtVerifierService } from './jwt-verifier.service';
     PassportModule.register({ defaultStrategy: 'jwt', session: false }),
     UsersModule,
   ],
-  providers: [JwtStrategy, JwtAuthGuard, Auth0ProfileService, JwtVerifierService],
+  providers: [
+    JwtStrategy,
+    JwtAuthGuard,
+    Auth0ProfileService,
+    JwtVerifierService,
+  ],
   exports: [JwtAuthGuard, PassportModule, JwtVerifierService],
 })
 export class AuthModule {}

@@ -27,7 +27,8 @@ export const roomAliveKey = (roomId: string): string => `room:${roomId}:alive`;
 
 export const roomOwnerKey = (roomId: string): string => `room:${roomId}:owner`;
 
-export const userRoomKey = (auth0Sub: string): string => `user:${auth0Sub}:room`;
+export const userRoomKey = (auth0Sub: string): string =>
+  `user:${auth0Sub}:room`;
 
 export const userCreatedRoomKey = (auth0Sub: string): string =>
   `user:${auth0Sub}:createdRoom`;

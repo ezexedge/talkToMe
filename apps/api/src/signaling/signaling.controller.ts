@@ -215,7 +215,9 @@ export class SignalingController {
         this.logger.warn(
           `[SSE-05] 🚫 Room LLENA (2/2) | clientId=${clientId} → envío 'room-full' y cierro su SSE`,
         );
-        subject.next({ data: { type: 'room-full', from: 'server' } as SignalMessage });
+        subject.next({
+          data: { type: 'room-full', from: 'server' } as SignalMessage,
+        });
         this.cleanupLocal(clientId, roomId);
         subject.complete();
         return;
@@ -246,7 +248,11 @@ export class SignalingController {
           `[SSE-07] 👑 clientId=${clientId} es el SEGUNDO en entrar → es INITIATOR. Le envío 'peer-joined' directo por su SSE local para que cree la oferta`,
         );
         subject.next({
-          data: { type: 'peer-joined', from: 'server', to: clientId } as SignalMessage,
+          data: {
+            type: 'peer-joined',
+            from: 'server',
+            to: clientId,
+          } as SignalMessage,
         });
 
         const waiting = await this.rooms.getPeer(roomId, clientId);
@@ -279,7 +285,9 @@ export class SignalingController {
         );
       }
     } catch (e) {
-      this.logger.error(`[SSE-ERR] ❌ onClientConnect: ${(e as Error).message}`);
+      this.logger.error(
+        `[SSE-ERR] ❌ onClientConnect: ${(e as Error).message}`,
+      );
       subject.error(e);
     }
   }

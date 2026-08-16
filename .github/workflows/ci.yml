@@ -38,11 +38,15 @@ jobs:
       - name: Install
         run: npm ci
 
-      # Sin --fix (el script local sí lo tiene): en CI el lint debe FALLAR ante
-      # un problema, no arreglarlo en silencio. El arreglo se perdería igual
-      # cuando muere el runner, y el job daría verde sin haber chequeado nada.
+      # `npm run` y NO `npx eslint`: npx bajaría la última versión (9.x), que
+      # solo lee eslint.config.js — y el proyecto tiene .eslintrc.js, el formato
+      # de eslint 8. El script del workspace usa el eslint instalado en el repo.
+      #
+      # lint:ci en vez de lint porque el segundo corre --fix: en CI el lint debe
+      # FALLAR ante un problema, no arreglarlo en silencio. El arreglo se
+      # perdería al morir el runner y el job daría verde sin chequear nada.
       - name: Lint
-        run: npx eslint "apps/api/{src,test}/**/*.ts"
+        run: npm run lint:ci --workspace=api
 
       - name: Build
         run: npx turbo build --filter=api

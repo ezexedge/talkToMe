@@ -38,7 +38,8 @@ export class JwtVerifierService {
           algorithms: ['RS256'],
         },
         (err, decoded) => {
-          if (err || !decoded) return reject(err ?? new Error('Token inválido'));
+          if (err || !decoded)
+            return reject(err ?? new Error('Token inválido'));
           resolve(decoded as jwt.JwtPayload);
         },
       );

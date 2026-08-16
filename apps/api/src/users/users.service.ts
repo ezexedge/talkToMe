@@ -35,7 +35,9 @@ export class UsersService {
     );
 
     const user = await this.repo.findOneByOrFail({ auth0Id: claims.sub });
-    this.logger.log(`[USER-01] 👤 upsert ok | auth0Id=${claims.sub} id=${user.id}`);
+    this.logger.log(
+      `[USER-01] 👤 upsert ok | auth0Id=${claims.sub} id=${user.id}`,
+    );
     return user;
   }
 

@@ -5,7 +5,12 @@
     "build": {
       "dependsOn": ["^build"],
       "inputs": ["$TURBO_DEFAULT$", ".env*"],
-      "outputs": [".next/**", "!.next/cache/**", "!.next/dev/**"]
+      // dist/** es la salida de Nest (apps/api); .next/** la de Next (apps/front).
+      // Sin dist/**, turbo no cachea el build del API y lo rehace siempre.
+      "outputs": ["dist/**", ".next/**", "!.next/cache/**", "!.next/dev/**"]
+    },
+    "test": {
+      "dependsOn": ["^build"]
     },
     "lint": {
       "dependsOn": ["^lint"]

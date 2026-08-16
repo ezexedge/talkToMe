@@ -186,7 +186,9 @@ export class RoomsService {
     if (created === roomId) {
       await this.redis.commands.del(userCreatedRoomKey(ownerId));
     }
-    this.logger.log(`[ROOM-06] 🗑️ Room ${roomId} ELIMINADA por su dueño ${ownerId}`);
+    this.logger.log(
+      `[ROOM-06] 🗑️ Room ${roomId} ELIMINADA por su dueño ${ownerId}`,
+    );
   }
 
   async isOwner(roomId: string, clientId: string): Promise<boolean> {
@@ -307,7 +309,7 @@ export class RoomsService {
       owner: string | null;
     }>
   > {
-    const pattern = roomAliveKey('*'); 
+    const pattern = roomAliveKey('*');
     const found: string[] = [];
 
     let cursor = '0';
@@ -343,7 +345,9 @@ export class RoomsService {
           members,
           owner,
           expiresInSeconds:
-            count === 0 && ttl > 0 && ttl <= RoomsService.EMPTY_ROOM_GRACE_SECONDS
+            count === 0 &&
+            ttl > 0 &&
+            ttl <= RoomsService.EMPTY_ROOM_GRACE_SECONDS
               ? ttl
               : null,
         };

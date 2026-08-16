@@ -28,14 +28,20 @@ export class RedisPubSubService implements OnModuleInit, OnModuleDestroy {
   onModuleInit(): void {
     const url = this.config.get<string>('REDIS_URL');
     if (!url) {
-      throw new Error('REDIS_URL no está definida (esquema rediss:// para Upstash)');
+      throw new Error(
+        'REDIS_URL no está definida (esquema rediss:// para Upstash)',
+      );
     }
 
     this.redisPub = new Redis(url, { lazyConnect: false });
     this.redisSub = new Redis(url, { lazyConnect: false });
 
-    this.redisPub.on('error', (e) => this.logger.error(`redisPub: ${e.message}`));
-    this.redisSub.on('error', (e) => this.logger.error(`redisSub: ${e.message}`));
+    this.redisPub.on('error', (e) =>
+      this.logger.error(`redisPub: ${e.message}`),
+    );
+    this.redisSub.on('error', (e) =>
+      this.logger.error(`redisSub: ${e.message}`),
+    );
 
     this.redisSub.on('message', (channel, raw) => {
       this.dispatchToLocalClients(channel, raw);
@@ -91,9 +97,9 @@ export class RedisPubSubService implements OnModuleInit, OnModuleDestroy {
         this.logger.log(
           `[REDIS-SUB-02] ↩️ Salto a ${clientId}: es el EMISOR (from), no me devuelvo su propio mensaje`,
         );
-        continue; 
+        continue;
       }
-      if (message.to && message.to !== clientId) continue; 
+      if (message.to && message.to !== clientId) continue;
       const subject = this.registry.getClient(clientId);
       if (subject) {
         this.logger.log(
