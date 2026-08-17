@@ -1,0 +1,14 @@
+# Override de SIMULACIÓN: limita los contenedores a los recursos del droplet
+# real (1 vCPU / 1 GB) para que la carga en el Mac refleje PRODUCCIÓN.
+# Publica puertos al host para poder pegarle desde el Mac.
+#   docker compose -f docker-compose.yml -f docker-compose.override.yml \
+#     -f docker-compose.droplet-sim.yml up -d api1 api2
+services:
+  api1:
+    cpus: 0.4
+    mem_limit: 320m
+    ports: ['3001:3000']
+  api2:
+    cpus: 0.4
+    mem_limit: 320m
+    ports: ['3002:3000']

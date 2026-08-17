@@ -27,7 +27,7 @@ import { brand, support } from './theme';
 
 const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3000';
 
-const POLL_MS = 10_000;
+const POLL_MS = 5_000;
 
 const LEAVE_SETTLE_MS = 6_000;
 
