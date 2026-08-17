@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useAuth0 } from '@auth0/auth0-react';
+import { playPeerJoined, playPeerLeft } from './callSounds';
 
 const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3000';
 const STUN = 'stun:stun.l.google.com:19302';
@@ -91,6 +92,10 @@ export function useAudioCall(roomId: string) {
   }, []);
 
   const markPeerGone = useCallback(() => {
+    // Único punto de salida CONFIRMADA del peer (los peer-left falsos ya se
+    // filtraron antes de llegar acá), así que el sonido va justo aquí y no se
+    // repite.
+    playPeerLeft();
     setPeerConnected(false);
     setPeerId(null);
     setPeerMuted(false);
@@ -144,7 +149,13 @@ export function useAudioCall(roomId: string) {
       if (remoteAudioRef.current) {
         remoteAudioRef.current.srcObject = ev.streams[0];
       }
-      setPeerConnected(true);
+      // Sonido SOLO en la transición ausente→presente. `ontrack` puede
+      // dispararse de nuevo en una renegociación con el peer ya conectado; sin
+      // este guard, el beep de "entró" sonaría cada vez.
+      setPeerConnected((prev) => {
+        if (!prev) playPeerJoined();
+        return true;
+      });
     };
 
     pc.onconnectionstatechange = () => {
